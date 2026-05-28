@@ -63,6 +63,10 @@
           <span class="menu-icon">📝</span>
           <span class="menu-label">פתקים שלי</span>
         </button>
+        <button class="menu-btn" data-go="fitness">
+          <span class="menu-icon">💪</span>
+          <span class="menu-label">כושר גופני</span>
+        </button>
       </div>
     </section>
 
@@ -141,6 +145,15 @@
         </div>
         <button id="aiSuggestBtn" class="full-btn" style="margin-bottom:14px" hidden>✨ הצעה חדשה מ-AI</button>
         <div id="shabbatSuggestions" class="shabbat-suggestions"></div>
+      </div>
+    </section>
+
+    <!-- כושר גופני -->
+    <section class="screen" data-screen="fitness">
+      <div class="list-wrap">
+        <div id="fitnessSummary" class="settings-block" style="margin-bottom:14px"></div>
+        <div id="fitnessList" class="item-list"></div>
+        <button class="add-btn" data-add="fitness">+ הוספת פעילות</button>
       </div>
     </section>
 
@@ -256,7 +269,10 @@
     <section class="screen" data-screen="notes">
       <div class="list-wrap">
         <div id="notesList" class="item-list"></div>
-        <button class="add-btn" data-add="note">+ פתק חדש</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;position:fixed;bottom:20px;inset-inline:18px;max-width:calc(100% - 36px)">
+          <button class="add-btn" data-add="note" style="position:static;inset:auto">+ פתק כתוב</button>
+          <button id="recordNoteBtn" class="add-btn" style="position:static;inset:auto;background:linear-gradient(135deg,#e74c3c,#ff8e72)">🎤 פתק קולי</button>
+        </div>
       </div>
     </section>
   </main>

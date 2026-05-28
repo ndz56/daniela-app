@@ -6,17 +6,20 @@
 const STORAGE_KEY = 'daniela-app-v1';
 
 const defaultState = {
-  appointments: [],   // {id, title, who, date, time, note, repeat: 'none'|'weekly'|'monthly'|'yearly'}
+  appointments: [],   // {id, title, who, location, date, time, note, repeat, category}
   meds: [],           // {id, name, time, takenDates:[]}
-  tests: [],          // {id, name, date, note}
+  tests: [],          // {id, name, category, date, location, note}
   birthdays: [],      // {id, name, date, calendar:'gregorian'|'hebrew'}
-  notes: [],          // {id, text, createdAt}
+  notes: [],          // {id, text, audio?, duration?, createdAt}
+  fitness: [],        // {id, category, duration, distance, note, date, createdAt}
   shabbat: { type: null, lastSuggestion: null },
   settings: {
     city: '', notifications: false, lastNotifyCheck: null, apiKey: '',
     firebaseConfig: '', familyCode: '',
-    modules: { appointments: true, meds: true, tests: true, birthdays: true, shabbat: true, notes: true },
+    modules: { appointments: true, meds: true, tests: true, birthdays: true, shabbat: true, notes: true, fitness: true },
     moduleLabels: {},
+    testCategories: ['בדיקת דם', 'US (אולטרסאונד)', 'רנטגן', 'MRI', 'CT', 'אקו לב', 'מיפוי', 'בדיקת ראייה', 'בדיקת שמיעה'],
+    fitnessCategories: ['🚶 הליכה', '🚴 אופניים', '🏃 ריצה', '🏊 שחייה', '🏋️ חדכ"ש', '🧘 יוגה', '⚽ ספורט קבוצתי'],
     calendarView: 'month' // 'month' | 'list'
   }
 };
@@ -143,7 +146,8 @@ const DEFAULT_LABELS = {
   tests: 'בדיקות דם',
   birthdays: 'ימי הולדת',
   shabbat: 'ארוחת שבת',
-  notes: 'פתקים שלי'
+  notes: 'פתקים שלי',
+  fitness: 'כושר גופני'
 };
 function getModuleLabel(key) {
   return state.settings.moduleLabels?.[key] || DEFAULT_LABELS[key] || key;
@@ -176,6 +180,7 @@ function showScreen(name) {
     tests: renderTests,
     birthdays: renderBirthdays,
     notes: renderNotes,
+    fitness: renderFitness,
     shabbat: renderShabbat,
     settings: renderSettings,
     day: renderDayScreen
@@ -440,6 +445,7 @@ function renderAppointmentsList() {
         <div class="item-main">
           <div class="item-title">${escapeHtml(a.title)} <span style="font-size:13px;color:${color};font-weight:700">${catLabel}</span></div>
           <div class="item-sub">${formatDateHe(a.date)}${a.time ? ' • ' + escapeHtml(a.time) : ''}${a.who ? ' • ' + escapeHtml(a.who) : ''}</div>
+          ${a.location ? `<div class="item-sub">📍 ${escapeHtml(a.location)}</div>` : ''}
           ${a.note ? `<div class="item-sub">${escapeHtml(a.note)}</div>` : ''}
           ${a.repeat && a.repeat !== 'none' ? `<div class="repeat-tag">🔁 ${REPEAT_LABELS[a.repeat]}</div>` : ''}
         </div>
@@ -635,6 +641,7 @@ function renderDayScreen() {
           <div class="item-main">
             <div class="item-title">${escapeHtml(a.title)} <span style="font-size:13px;color:${color};font-weight:700">${catLabel}</span></div>
             <div class="item-sub">${a.time ? 'בשעה ' + escapeHtml(a.time) : 'ללא שעה'}${a.who ? ' • ' + escapeHtml(a.who) : ''}</div>
+            ${a.location ? `<div class="item-sub">📍 ${escapeHtml(a.location)}</div>` : ''}
             ${a.note ? `<div class="item-sub">${escapeHtml(a.note)}</div>` : ''}
             ${a.repeat && a.repeat !== 'none' ? `<div class="repeat-tag">🔁 ${REPEAT_LABELS[a.repeat]}</div>` : ''}
           </div>
@@ -654,12 +661,15 @@ function applyModuleVisibility() {
   document.querySelectorAll('[data-go]').forEach(btn => {
     const target = btn.dataset.go;
     if (DEFAULT_LABELS[target]) {
-      // עדכון התווית של הכפתור לשם מותאם אם יש
       const labelEl = btn.querySelector('.menu-label');
       if (labelEl) labelEl.textContent = getModuleLabel(target);
     }
-    if (mods[target] === false) btn.style.display = 'none';
-    else btn.style.display = '';
+    // הצגה רק אם המודול כפתור-יכיל (לא הגדרות/יום)
+    const isMenuButton = btn.classList.contains('menu-btn');
+    if (isMenuButton) {
+      if (mods[target] === false) btn.style.display = 'none';
+      else btn.style.display = '';
+    }
   });
 }
 
@@ -673,7 +683,8 @@ function renderModuleToggles() {
     {key:'tests', icon:'🩸'},
     {key:'birthdays', icon:'🎂'},
     {key:'shabbat', icon:'🕯️'},
-    {key:'notes', icon:'📝'}
+    {key:'notes', icon:'📝'},
+    {key:'fitness', icon:'💪'}
   ];
   container.innerHTML = items.map(it => `
     <div class="module-row">
@@ -709,10 +720,11 @@ function renderTests() {
   const sorted = [...state.tests].sort((a,b) => (a.date||'').localeCompare(b.date||''));
   if (sorted.length === 0) { list.innerHTML = emptyMsg('עדיין אין בדיקות מתוכננות.'); return; }
   list.innerHTML = sorted.map(t => `
-    <div class="item-card">
+    <div class="item-card" style="border-right:6px solid #c0392b">
       <div class="item-main">
-        <div class="item-title">${escapeHtml(t.name)}</div>
+        <div class="item-title">${t.category ? `<span style="background:#fde8e8;color:#c0392b;padding:2px 8px;border-radius:8px;font-size:13px;font-weight:700">${escapeHtml(t.category)}</span> ` : ''}${escapeHtml(t.name)}</div>
         <div class="item-sub">${t.date ? formatDateHe(t.date) : 'ללא תאריך'}</div>
+        ${t.location ? `<div class="item-sub">📍 ${escapeHtml(t.location)}</div>` : ''}
         ${t.note ? `<div class="item-sub">${escapeHtml(t.note)}</div>` : ''}
       </div>
       <button class="item-action delete" data-del="test" data-id="${t.id}" aria-label="מחיקה">🗑️</button>
@@ -769,14 +781,129 @@ function renderBirthdays() {
 function renderNotes() {
   const list = document.getElementById('notesList');
   const sorted = [...state.notes].sort((a,b) => b.createdAt - a.createdAt);
-  if (sorted.length === 0) { list.innerHTML = emptyMsg('כאן יישמרו הפתקים והמחשבות שלך.'); return; }
-  list.innerHTML = sorted.map(n => `
+  if (sorted.length === 0) { list.innerHTML = emptyMsg('כאן יישמרו הפתקים, מחשבות והקלטות שלך.'); return; }
+  list.innerHTML = sorted.map(n => {
+    const audioHtml = n.audio ? `<audio controls src="${n.audio}" style="width:100%;margin-top:8px"></audio>` : '';
+    const text = n.text || (n.audio ? '🎤 פתק קולי' : '');
+    return `
     <div class="item-card">
       <div class="item-main">
-        <div class="item-title" style="white-space:pre-wrap;font-weight:600;font-size:17px">${escapeHtml(n.text)}</div>
+        <div class="item-title" style="white-space:pre-wrap;font-weight:600;font-size:17px">${escapeHtml(text)}</div>
+        ${audioHtml}
         <div class="item-sub">${new Date(n.createdAt).toLocaleString('he-IL')}</div>
       </div>
       <button class="item-action delete" data-del="note" data-id="${n.id}" aria-label="מחיקה">🗑️</button>
+    </div>
+  `;}).join('');
+}
+
+// ===== הקלטה קולית =====
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordingStartTime = 0;
+let recordingTimer = null;
+
+async function startRecording() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert('הדפדפן הזה לא תומך בהקלטה');
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        const duration = Math.round((Date.now() - recordingStartTime) / 1000);
+        const label = prompt('כותרת קצרה (לא חובה):', '');
+        state.notes.push({
+          id: uid(),
+          text: label || '',
+          audio: dataUrl,
+          duration,
+          createdAt: Date.now()
+        });
+        saveState();
+        showToast('הקלטה נשמרה ✓');
+        renderNotes();
+      };
+      reader.readAsDataURL(blob);
+    };
+    mediaRecorder.start();
+    recordingStartTime = Date.now();
+    showRecordingUI();
+  } catch (err) {
+    alert('לא ניתן להקליט: ' + (err.message || 'אין הרשאת מיקרופון'));
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+  }
+  hideRecordingUI();
+}
+
+function showRecordingUI() {
+  if (document.getElementById('recBanner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'recBanner';
+  banner.style.cssText = 'position:fixed;top:60px;inset-inline:18px;background:#e74c3c;color:white;padding:14px 18px;border-radius:14px;z-index:300;box-shadow:0 10px 30px rgba(231,76,60,0.4);display:flex;align-items:center;gap:12px;font-weight:700';
+  banner.innerHTML = '<span style="font-size:20px">🔴</span><span style="flex:1">מקליט... <span id="recTime">0:00</span></span><button id="stopRecBtn" style="background:white;color:#e74c3c;border:none;padding:8px 16px;border-radius:10px;font-weight:700;font-family:inherit;cursor:pointer">סיים</button>';
+  document.body.appendChild(banner);
+  recordingTimer = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+    const mm = Math.floor(elapsed / 60);
+    const ss = (elapsed % 60).toString().padStart(2, '0');
+    const el = document.getElementById('recTime');
+    if (el) el.textContent = `${mm}:${ss}`;
+  }, 500);
+  document.getElementById('stopRecBtn').addEventListener('click', stopRecording);
+}
+
+function hideRecordingUI() {
+  clearInterval(recordingTimer);
+  recordingTimer = null;
+  const banner = document.getElementById('recBanner');
+  if (banner) banner.remove();
+}
+
+function renderFitness() {
+  const summary = document.getElementById('fitnessSummary');
+  const list = document.getElementById('fitnessList');
+  const items = state.fitness || [];
+
+  // סטטיסטיקה ל-30 יום אחרונים
+  const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate() - 30);
+  const recent = items.filter(f => new Date(f.date) >= monthAgo);
+  const totalMin = recent.reduce((s, f) => s + (Number(f.duration) || 0), 0);
+  const totalKm = recent.reduce((s, f) => s + (Number(f.distance) || 0), 0);
+  const totalActivities = recent.length;
+
+  summary.innerHTML = `
+    <h3>📊 חודש אחרון</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px;text-align:center">
+      <div><div style="font-size:24px;font-weight:800;color:#4a2e9c">${totalActivities}</div><div style="font-size:13px;color:#6b5e8f">פעילויות</div></div>
+      <div><div style="font-size:24px;font-weight:800;color:#4a2e9c">${totalMin}</div><div style="font-size:13px;color:#6b5e8f">דקות</div></div>
+      <div><div style="font-size:24px;font-weight:800;color:#4a2e9c">${totalKm.toFixed(1)}</div><div style="font-size:13px;color:#6b5e8f">ק"מ</div></div>
+    </div>
+  `;
+
+  const sorted = [...items].sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+  if (sorted.length === 0) { list.innerHTML = emptyMsg('עדיין אין פעילויות. תרשמי את הראשונה!'); return; }
+  list.innerHTML = sorted.map(f => `
+    <div class="item-card" style="border-right:6px solid #27ae60">
+      <div class="item-main">
+        <div class="item-title">${escapeHtml(f.category || 'פעילות')}</div>
+        <div class="item-sub">${formatDateHe(f.date)}${f.duration ? ' • ' + escapeHtml(f.duration) + ' דק׳' : ''}${f.distance ? ' • ' + escapeHtml(f.distance) + ' ק"מ' : ''}</div>
+        ${f.note ? `<div class="item-sub">${escapeHtml(f.note)}</div>` : ''}
+      </div>
+      <button class="item-action delete" data-del="fitness" data-id="${f.id}" aria-label="מחיקה">🗑️</button>
     </div>
   `).join('');
 }
@@ -1032,6 +1159,7 @@ document.addEventListener('click', (e) => {
     if (type === 'test')        state.tests        = state.tests.filter(x => x.id !== id);
     if (type === 'birthday')    state.birthdays    = state.birthdays.filter(x => x.id !== id);
     if (type === 'note')        state.notes        = state.notes.filter(x => x.id !== id);
+    if (type === 'fitness')     state.fitness      = state.fitness.filter(x => x.id !== id);
     saveState();
     showToast('נמחק');
     showScreen(document.querySelector('.screen.active').dataset.screen);
@@ -1076,6 +1204,7 @@ const ADD_CONFIGS = {
         { value: 'work',    label: '💼 עבודה' }
       ]},
       { name: 'who',   label: 'עם מי?',     type: 'text', placeholder: 'שם הרופא/החברה' },
+      { name: 'location', label: 'מיקום (לא חובה)', type: 'text', placeholder: 'כתובת / קליניקה / מקום' },
       { name: 'date',  label: 'מתי?',       type: 'date', required: true },
       { name: 'time',  label: 'באיזו שעה?', type: 'time' },
       { name: 'repeat', label: 'חוזרת?', type: 'select', options: [
@@ -1097,9 +1226,11 @@ const ADD_CONFIGS = {
   test: {
     title: 'הוספת בדיקה',
     fields: [
-      { name: 'name', label: 'איזו בדיקה?', type: 'text', required: true, placeholder: 'לדוגמה: ספירת דם' },
+      { name: 'category', label: 'סוג בדיקה', type: 'dynamicSelect', source: 'testCategories' },
+      { name: 'name', label: 'פירוט (מה בודקים?)', type: 'text', required: true, placeholder: 'לדוגמה: ספירת דם / בטן עליונה' },
       { name: 'date', label: 'מתי?', type: 'date' },
-      { name: 'note', label: 'הערה (צום? איפה?)', type: 'textarea' }
+      { name: 'location', label: 'איפה?', type: 'text', placeholder: 'מכבי / כללית / שם המכון' },
+      { name: 'note', label: 'הערה (צום? הכנה?)', type: 'textarea' }
     ]
   },
   birthday: {
@@ -1110,13 +1241,23 @@ const ADD_CONFIGS = {
         { value: 'gregorian', label: 'לוח לועזי' },
         { value: 'hebrew',    label: 'לוח עברי' }
       ], required: true },
-      { name: 'date', label: 'תאריך לידה', type: 'date', required: true, hint: 'הכניסי את התאריך הלועזי של הלידה - האפליקציה תזהה גם את התאריך העברי' }
+      { name: 'date', label: 'תאריך לידה', type: 'dmyDate', required: true, hint: 'בוחרים יום, חודש ושנה - השנה היא תיבת בחירה נוחה' }
     ]
   },
   note: {
     title: 'פתק חדש',
     fields: [
       { name: 'text', label: 'מה לכתוב?', type: 'textarea', required: true, placeholder: 'מחשבה, רעיון, תזכורת...' }
+    ]
+  },
+  fitness: {
+    title: 'הוספת פעילות גופנית',
+    fields: [
+      { name: 'category', label: 'סוג פעילות', type: 'dynamicSelect', source: 'fitnessCategories' },
+      { name: 'date', label: 'מתי?', type: 'date', required: true },
+      { name: 'duration', label: 'משך (דקות)', type: 'number', placeholder: 'לדוגמה: 30' },
+      { name: 'distance', label: 'מרחק (ק"מ)', type: 'number', placeholder: 'לדוגמה: 5' },
+      { name: 'note', label: 'הערה (איך הרגשתי, מסלול, וכו׳)', type: 'textarea' }
     ]
   }
 };
@@ -1133,10 +1274,65 @@ function openAdd(type, prefill = {}) {
     if (f.type === 'select') {
       return `<label>${f.label}</label><select name="${f.name}" ${f.required ? 'required' : ''}>${f.options.map(o => `<option value="${o.value}" ${o.value === pre ? 'selected' : ''}>${o.label}</option>`).join('')}</select>`;
     }
+    if (f.type === 'dmyDate') {
+      // ברירת מחדל: אם לא הוזן - אמצע 1980
+      let preY = 1980, preM = 1, preD = 1;
+      if (pre) {
+        const m = pre.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) { preY = Number(m[1]); preM = Number(m[2]); preD = Number(m[3]); }
+      }
+      const thisYear = new Date().getFullYear();
+      const years = [];
+      for (let y = thisYear; y >= thisYear - 120; y--) years.push(y);
+      const monthsOpts = HE_MONTHS.map((m, i) => `<option value="${i+1}" ${i+1 === preM ? 'selected' : ''}>${m}</option>`).join('');
+      const yearsOpts = years.map(y => `<option value="${y}" ${y === preY ? 'selected' : ''}>${y}</option>`).join('');
+      const daysOpts = Array.from({length: 31}, (_, i) => `<option value="${i+1}" ${i+1 === preD ? 'selected' : ''}>${i+1}</option>`).join('');
+      return `<label>${f.label}</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+          <select data-dmy-day name="__dmy_day_${f.name}">${daysOpts}</select>
+          <select data-dmy-month name="__dmy_month_${f.name}">${monthsOpts}</select>
+          <select data-dmy-year name="__dmy_year_${f.name}">${yearsOpts}</select>
+        </div>
+        <input type="hidden" name="${f.name}" data-dmy-field="${f.name}" value="${pre}" />
+        ${f.hint ? `<div class="item-sub" style="margin-top:4px">${f.hint}</div>` : ''}`;
+    }
+    if (f.type === 'dynamicSelect') {
+      const items = state.settings[f.source] || [];
+      const options = items.map(it => `<option value="${escapeHtml(it)}" ${it === pre ? 'selected' : ''}>${escapeHtml(it)}</option>`).join('');
+      return `<label>${f.label}</label>
+        <div style="display:flex;gap:6px">
+          <select name="${f.name}" data-dynamic-source="${f.source}" style="flex:1">${options}<option value="__add_new__">➕ הוסיפי קטגוריה חדשה...</option></select>
+        </div>`;
+    }
     return `<label>${f.label}</label><input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} placeholder="${f.placeholder||''}" value="${escapeHtml(pre)}" />${f.hint ? `<div class="item-sub" style="margin-top:-8px;margin-bottom:10px">${f.hint}</div>` : ''}`;
   }).join('');
   modal.classList.remove('hidden');
 }
+
+// הוספת קטגוריה חדשה דינמית
+document.addEventListener('change', (e) => {
+  if (e.target.matches('[data-dynamic-source]') && e.target.value === '__add_new__') {
+    const source = e.target.dataset.dynamicSource;
+    const newCat = prompt('שם הקטגוריה החדשה:');
+    if (newCat && newCat.trim()) {
+      const list = state.settings[source] || [];
+      const trimmed = newCat.trim();
+      if (!list.includes(trimmed)) {
+        list.push(trimmed);
+        state.settings[source] = list;
+        saveState();
+      }
+      // הוספת אופציה חדשה ל-select ובחירתה
+      const newOption = document.createElement('option');
+      newOption.value = trimmed;
+      newOption.textContent = trimmed;
+      e.target.insertBefore(newOption, e.target.lastElementChild);
+      e.target.value = trimmed;
+    } else {
+      e.target.value = e.target.options[0]?.value || '';
+    }
+  }
+});
 
 document.addEventListener('click', (e) => {
   const add = e.target.closest('[data-add]');
@@ -1148,13 +1344,26 @@ function closeModal() { modal.classList.add('hidden'); currentAdd = null; }
 
 modalForm.addEventListener('submit', (e) => {
   e.preventDefault();
+  // איסוף נתוני dmyDate והפיכתם לפורמט YYYY-MM-DD
+  modalForm.querySelectorAll('[data-dmy-field]').forEach(hidden => {
+    const fname = hidden.dataset.dmyField;
+    const day = modalForm.querySelector(`[name="__dmy_day_${fname}"]`)?.value;
+    const month = modalForm.querySelector(`[name="__dmy_month_${fname}"]`)?.value;
+    const year = modalForm.querySelector(`[name="__dmy_year_${fname}"]`)?.value;
+    if (day && month && year) {
+      hidden.value = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    }
+  });
   const data = Object.fromEntries(new FormData(modalForm).entries());
+  // ניקוי שדות עזר __dmy_*
+  Object.keys(data).filter(k => k.startsWith('__dmy_')).forEach(k => delete data[k]);
   if (!currentAdd) return;
   if (currentAdd === 'appointment') state.appointments.push({ id: uid(), ...data, repeat: data.repeat || 'none' });
   if (currentAdd === 'med')         state.meds.push({ id: uid(), ...data, takenDates: [] });
   if (currentAdd === 'test')        state.tests.push({ id: uid(), ...data });
   if (currentAdd === 'birthday')    state.birthdays.push({ id: uid(), ...data });
   if (currentAdd === 'note')        state.notes.push({ id: uid(), text: data.text, createdAt: Date.now() });
+  if (currentAdd === 'fitness')     state.fitness.push({ id: uid(), ...data, createdAt: Date.now() });
   saveState();
   closeModal();
   showToast('נשמר ✓');
@@ -1210,6 +1419,7 @@ document.addEventListener('click', (e) => {
   if (e.target.id === 'enableNotifyBtn') requestNotifications();
   if (e.target.id === 'exportBtn') exportBackup();
   if (e.target.id === 'importBtn') document.getElementById('importFile').click();
+  if (e.target.id === 'recordNoteBtn') startRecording();
   if (e.target.id === 'saveApiKeyBtn') saveApiKey();
   if (e.target.id === 'aiSuggestBtn') generateAiSuggestion();
   if (e.target.id === 'connectSyncBtn') connectSync();
