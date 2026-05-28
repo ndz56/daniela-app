@@ -235,15 +235,77 @@ function renderHome() {
 }
 
 // ===== מידע שבת/חג מ-hebcal =====
+function fmtTime(d) {
+  if (!d) return '';
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+
+function getCityForShabbat() {
+  return state.settings.city || 'Tel Aviv';
+}
+
+// מחזיר את זמני שבת הקרובה (מתאים גם בשבוע, ביום שישי, ובשבת)
+function getNextShabbatTimes() {
+  if (typeof hebcal === 'undefined') return null;
+  try {
+    const loc = hebcal.Location.lookup(getCityForShabbat());
+    if (!loc) return null;
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0=ראשון, 5=שישי, 6=שבת
+
+    // חישוב יום שישי הקרוב/הנוכחי
+    let friday = new Date(now);
+    friday.setHours(12, 0, 0, 0);
+    if (dayOfWeek === 6) {
+      // שבת - יום השישי האחרון
+      friday.setDate(now.getDate() - 1);
+    } else if (dayOfWeek !== 5) {
+      const daysUntil = (5 - dayOfWeek + 7) % 7;
+      friday.setDate(now.getDate() + daysUntil);
+    }
+    const saturday = new Date(friday);
+    saturday.setDate(friday.getDate() + 1);
+
+    const fridayZ = new hebcal.Zmanim(loc, friday);
+    const satZ = new hebcal.Zmanim(loc, saturday);
+    return {
+      friday, saturday,
+      candles: fridayZ.sunsetOffset(-18),  // הדלקת נרות: 18 דק׳ לפני שקיעה
+      havdalah: satZ.sunsetOffset(42)       // הבדלה: 42 דק׳ אחרי שקיעה
+    };
+  } catch { return null; }
+}
+
+// זמני שבת לפי תאריך נתון (לתאי הלוח)
+function getCandleLightingFor(dateIso) {
+  if (typeof hebcal === 'undefined') return null;
+  try {
+    const loc = hebcal.Location.lookup(getCityForShabbat());
+    if (!loc) return null;
+    const [y,m,d] = dateIso.split('-').map(Number);
+    const dt = new Date(y, m-1, d, 12);
+    const z = new hebcal.Zmanim(loc, dt);
+    return fmtTime(z.sunsetOffset(-18));
+  } catch { return null; }
+}
+function getHavdalahFor(dateIso) {
+  if (typeof hebcal === 'undefined') return null;
+  try {
+    const loc = hebcal.Location.lookup(getCityForShabbat());
+    if (!loc) return null;
+    const [y,m,d] = dateIso.split('-').map(Number);
+    const dt = new Date(y, m-1, d, 12);
+    const z = new hebcal.Zmanim(loc, dt);
+    return fmtTime(z.sunsetOffset(42));
+  } catch { return null; }
+}
+
 function getShabbatInfo() {
   if (typeof hebcal === 'undefined') return '';
   try {
-    const city = state.settings.city;
     const now = new Date();
-    const dayOfWeek = now.getDay();
 
     // חיפוש החג הקרוב (בטווח 14 יום קדימה)
-    let upcomingHoliday = null;
     for (let i = 0; i <= 14; i++) {
       const d = new Date(now); d.setDate(now.getDate() + i);
       const hd = new hebcal.HDate(d);
@@ -252,30 +314,22 @@ function getShabbatInfo() {
         const ev = events.find(e => e.getCategories().includes('major') || e.getCategories().includes('holiday'));
         if (ev) {
           const renderHe = ev.renderBrief('he');
-          upcomingHoliday = i === 0 ? `היום: ${renderHe}` : `בעוד ${i} ימים: ${renderHe}`;
-          break;
+          return i === 0 ? `היום: ${renderHe}` : `בעוד ${i} ימים: ${renderHe}`;
         }
       }
     }
-    if (upcomingHoliday) return upcomingHoliday;
 
-    // אם זה שישי או שבת, ננסה להציג זמן הדלקת נרות
-    if (dayOfWeek === 5 && city) {
-      try {
-        const loc = hebcal.Location.lookup(city);
-        if (loc) {
-          const zmanim = new hebcal.Zmanim(loc, now);
-          const candles = zmanim.sunsetOffset(-18);
-          if (candles) {
-            const hh = candles.getHours().toString().padStart(2,'0');
-            const mm = candles.getMinutes().toString().padStart(2,'0');
-            return `🕯️ הדלקת נרות בשעה ${hh}:${mm}`;
-          }
-        }
-      } catch {}
-    }
-    if (dayOfWeek === 6) return '🕯️ שבת שלום!';
-    return '';
+    // אם אין חג קרוב - הצגת זמני שבת קרובה
+    const sh = getNextShabbatTimes();
+    if (!sh) return '';
+    const dayOfWeek = now.getDay();
+    const candleStr = fmtTime(sh.candles);
+    const havStr = fmtTime(sh.havdalah);
+    const fridayDate = `${sh.friday.getDate()}/${sh.friday.getMonth()+1}`;
+
+    if (dayOfWeek === 6) return `🕯️ שבת שלום! יציאת השבת ${havStr}`;
+    if (dayOfWeek === 5) return `🕯️ שבת היום - כניסה ${candleStr} | יציאה ${havStr}`;
+    return `🕯️ שבת ${fridayDate}: כניסה ${candleStr} | יציאה ${havStr}`;
   } catch { return ''; }
 }
 
@@ -533,9 +587,21 @@ function renderCalendarMonth() {
       return `<span class="cal-dot ${cls}" ${bg}></span>`;
     }).join('');
 
+    // זמני שבת לתאי שישי ושבת
+    let shabbatTime = '';
+    if (!c.otherMonth) {
+      if (c.date.getDay() === 5) {
+        const t = getCandleLightingFor(iso);
+        if (t) shabbatTime = `<div class="cal-shabbat-time">🕯️${t}</div>`;
+      } else if (c.date.getDay() === 6) {
+        const t = getHavdalahFor(iso);
+        if (t) shabbatTime = `<div class="cal-shabbat-time">✨${t}</div>`;
+      }
+    }
     return `<button class="cal-day ${c.otherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''} ${isShabbat ? 'shabbat' : ''} ${events.length ? 'has-events' : ''} ${apptSearchTerm && !isMatch ? 'dimmed' : ''} ${apptSearchTerm && isMatch ? 'matched' : ''}" data-day="${iso}">
       <div class="cal-day-num">${c.date.getDate()}</div>
       <div class="cal-heb">${heb}</div>
+      ${shabbatTime}
       <div class="cal-dots">${dots}</div>
     </button>`;
   }).join('');

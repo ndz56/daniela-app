@@ -606,11 +606,20 @@ textarea.full-select { resize: vertical; }
   direction: rtl;
 }
 
+.cal-shabbat-time {
+  font-size: 9px;
+  font-weight: 700;
+  color: #b8860b;
+  line-height: 1.1;
+  margin-top: 1px;
+}
+.cal-day.today .cal-shabbat-time { color: #ffeb99; }
+
 .cal-day {
   background: white;
   border-radius: 12px;
   padding: 6px 4px;
-  min-height: 58px;
+  min-height: 68px;
   display: flex;
   flex-direction: column;
   align-items: center;
