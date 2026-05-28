@@ -1419,9 +1419,40 @@ function showToast(msg) {
 
 // ===== service worker =====
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js');
+      // בדיקה אקטיבית לעדכונים בכל פתיחה
+      reg.update();
+      // האזנה להודעה מה-SW על עדכון
+      navigator.serviceWorker.addEventListener('message', (e) => {
+        if (e.data?.type === 'SW_UPDATED') {
+          showUpdateBanner();
+        }
+      });
+      // בדיקה אם יש worker שמחכה
+      if (reg.waiting) showUpdateBanner();
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateBanner();
+          }
+        });
+      });
+    } catch {}
   });
+}
+
+function showUpdateBanner() {
+  if (document.getElementById('updateBanner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'updateBanner';
+  banner.style.cssText = 'position:fixed;bottom:90px;inset-inline:18px;background:#2b1d4a;color:white;padding:14px 18px;border-radius:14px;z-index:300;box-shadow:0 10px 30px rgba(0,0,0,0.3);display:flex;align-items:center;gap:12px;font-weight:600;';
+  banner.innerHTML = '<span style="flex:1">✨ גרסה חדשה זמינה</span><button style="background:white;color:#2b1d4a;border:none;padding:8px 14px;border-radius:10px;font-weight:700;font-family:inherit;cursor:pointer">רענן</button>';
+  banner.querySelector('button').addEventListener('click', () => location.reload());
+  document.body.appendChild(banner);
 }
 
 // ===== התחלה =====
