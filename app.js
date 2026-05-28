@@ -305,10 +305,38 @@ function getHavdalahFor(dateIso) {
   } catch { return null; }
 }
 
+function getThisWeekParasha() {
+  if (typeof hebcal === 'undefined') return '';
+  try {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    let saturday = new Date(now);
+    saturday.setHours(12, 0, 0, 0);
+    if (dayOfWeek !== 6) {
+      const daysUntil = (6 - dayOfWeek + 7) % 7;
+      saturday.setDate(now.getDate() + daysUntil);
+    }
+    const events = hebcal.HebrewCalendar.calendar({
+      start: saturday, end: saturday,
+      sedrot: true, noHolidays: true, il: true
+    }) || [];
+    const parsha = events.find(e => {
+      const cats = e.getCategories ? e.getCategories() : [];
+      return cats.includes('parashat') || cats.includes('parsha') || cats.includes('sedrah');
+    });
+    if (parsha) {
+      const brief = parsha.renderBrief('he');
+      return brief.startsWith('פרשת') ? brief : 'פרשת ' + brief;
+    }
+  } catch {}
+  return '';
+}
+
 function getShabbatInfo() {
   if (typeof hebcal === 'undefined') return '';
   try {
     const now = new Date();
+    const dayOfWeek = now.getDay();
 
     // חיפוש החג הקרוב (בטווח 14 יום קדימה)
     for (let i = 0; i <= 14; i++) {
@@ -319,22 +347,36 @@ function getShabbatInfo() {
         const ev = events.find(e => e.getCategories().includes('major') || e.getCategories().includes('holiday'));
         if (ev) {
           const renderHe = ev.renderBrief('he');
-          return i === 0 ? `היום: ${renderHe}` : `בעוד ${i} ימים: ${renderHe}`;
+          const holidayStr = i === 0 ? `🎉 היום: ${renderHe}` : `🎉 בעוד ${i} ימים: ${renderHe}`;
+          // אם זה גם שישי/שבת - נוסיף גם פרשה
+          if (dayOfWeek === 5 || dayOfWeek === 6) {
+            const parsha = getThisWeekParasha();
+            return parsha ? holidayStr + ' • ' + parsha : holidayStr;
+          }
+          return holidayStr;
         }
       }
     }
 
-    // אם אין חג קרוב - הצגת זמני שבת קרובה
+    // זמני שבת - רק בשישי/שבת
+    if (dayOfWeek !== 5 && dayOfWeek !== 6) {
+      // ימי חול - נציג רק את הפרשה
+      const parsha = getThisWeekParasha();
+      return parsha ? '📖 ' + parsha : '';
+    }
+
     const sh = getNextShabbatTimes();
     if (!sh) return '';
-    const dayOfWeek = now.getDay();
+    const parsha = getThisWeekParasha();
     const candleStr = fmtTime(sh.candles);
     const havStr = fmtTime(sh.havdalah);
-    const fridayDate = `${sh.friday.getDate()}/${sh.friday.getMonth()+1}`;
-
-    if (dayOfWeek === 6) return `🕯️ שבת שלום! יציאת השבת ${havStr}`;
-    if (dayOfWeek === 5) return `🕯️ שבת היום - כניסה ${candleStr} | יציאה ${havStr}`;
-    return `🕯️ שבת ${fridayDate}: כניסה ${candleStr} | יציאה ${havStr}`;
+    if (dayOfWeek === 6) {
+      const p = parsha ? `📖 ${parsha} • ` : '';
+      return `${p}🕯️ שבת שלום! יציאה ${havStr}`;
+    }
+    // יום שישי
+    const p = parsha ? `📖 ${parsha} • ` : '';
+    return `${p}🕯️ כניסה ${candleStr} | יציאה ${havStr}`;
   } catch { return ''; }
 }
 
@@ -593,16 +635,11 @@ function renderCalendarMonth() {
       return `<span class="cal-dot ${cls}" ${bg}></span>`;
     }).join('');
 
-    // זמני שבת לתאי שישי ושבת
+    // זמני שבת - רק בשישי (כניסת השבת)
     let shabbatTime = '';
-    if (!c.otherMonth) {
-      if (c.date.getDay() === 5) {
-        const t = getCandleLightingFor(iso);
-        if (t) shabbatTime = `<div class="cal-shabbat-time">🕯️${t}</div>`;
-      } else if (c.date.getDay() === 6) {
-        const t = getHavdalahFor(iso);
-        if (t) shabbatTime = `<div class="cal-shabbat-time">✨${t}</div>`;
-      }
+    if (!c.otherMonth && c.date.getDay() === 5) {
+      const t = getCandleLightingFor(iso);
+      if (t) shabbatTime = `<div class="cal-shabbat-time">🕯️${t}</div>`;
     }
     return `<button class="cal-day ${c.otherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''} ${isShabbat ? 'shabbat' : ''} ${events.length ? 'has-events' : ''} ${apptSearchTerm && !isMatch ? 'dimmed' : ''} ${apptSearchTerm && isMatch ? 'matched' : ''}" data-day="${iso}">
       <div class="cal-day-num">${c.date.getDate()}</div>
