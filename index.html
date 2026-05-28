@@ -68,6 +68,10 @@
 
     <!-- פגישות -->
     <section class="screen" data-screen="appointments">
+      <div class="search-bar">
+        <input id="apptSearch" type="search" placeholder="🔍 חיפוש פגישה (שם, רופא, הערה)..." />
+        <button id="apptSearchClear" class="search-clear" hidden aria-label="ניקוי">×</button>
+      </div>
       <div class="calendar-header">
         <button id="calPrev" class="cal-nav" aria-label="חודש קודם">‹</button>
         <button id="calToday" class="cal-today-btn" aria-label="חזרה להיום">היום</button>
@@ -256,6 +260,18 @@
       </div>
     </section>
   </main>
+
+  <!-- מודאל בורר חודש/שנה -->
+  <div id="monthPicker" class="modal hidden">
+    <div class="modal-content">
+      <h2>קפיצה לחודש</h2>
+      <div class="month-picker-years" id="pickerYears"></div>
+      <div class="month-picker-months" id="pickerMonths"></div>
+      <div class="modal-actions">
+        <button type="button" class="cancel-btn" id="pickerCancel">סגירה</button>
+      </div>
+    </div>
+  </div>
 
   <!-- מודאל הוספה -->
   <div id="modal" class="modal hidden">

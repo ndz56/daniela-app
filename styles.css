@@ -456,6 +456,37 @@ textarea.full-select { resize: vertical; }
 .settings-block details code { background: #f5efff; padding: 1px 4px; border-radius: 4px; }
 
 /* ===== לוח חודשי ===== */
+.search-bar {
+  padding: 8px 18px 4px;
+  position: relative;
+}
+.search-bar input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  font-family: inherit;
+  border: 2px solid #e0d4f5;
+  border-radius: 14px;
+  background: white;
+  color: #2b1d4a;
+  box-sizing: border-box;
+}
+.search-bar input:focus { outline: none; border-color: #7b5cd6; }
+.search-clear {
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e0d4f5;
+  color: #4a2e9c;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .calendar-header {
   display: flex;
   align-items: center;
@@ -503,6 +534,52 @@ textarea.full-select { resize: vertical; }
   padding-inline-end: 12px;
 }
 .list-month-header:first-child { margin-top: 4px; }
+
+.cal-title {
+  cursor: pointer;
+  user-select: none;
+}
+.cal-title:active { opacity: 0.7; }
+
+.month-picker-years {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 0 14px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #e0d4f5;
+}
+.month-picker-years button {
+  flex-shrink: 0;
+  padding: 8px 18px;
+  border-radius: 12px;
+  background: #faf7ff;
+  color: #4a2e9c;
+  font-weight: 700;
+  font-size: 16px;
+  border: 2px solid transparent;
+}
+.month-picker-years button.selected {
+  background: linear-gradient(135deg, #7b5cd6, #b07ce8);
+  color: white;
+}
+.month-picker-months {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.month-picker-months button {
+  padding: 14px 8px;
+  border-radius: 12px;
+  background: #faf7ff;
+  color: #4a2e9c;
+  font-weight: 700;
+  font-size: 15px;
+}
+.month-picker-months button.current {
+  background: linear-gradient(135deg, #7b5cd6, #b07ce8);
+  color: white;
+}
 
 .cal-month-view { padding: 0 14px; }
 
@@ -555,6 +632,8 @@ textarea.full-select { resize: vertical; }
 .cal-day.today .cal-heb { color: rgba(255,255,255,0.85); }
 .cal-day.shabbat { border: 2px solid #f6c878; }
 .cal-day.has-events { font-weight: 800; }
+.cal-day.dimmed { opacity: 0.25; }
+.cal-day.matched { box-shadow: 0 0 0 3px #f6c878, 0 2px 6px rgba(0,0,0,0.04); }
 
 .cal-day-num { font-size: 16px; }
 .cal-heb { font-size: 11px; color: #8b7eb3; line-height: 1.1; margin-top: 1px; }
