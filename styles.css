@@ -763,6 +763,25 @@ textarea.full-select { resize: vertical; }
 
 .module-toggle .toggle-icon { font-size: 20px; }
 
+.module-row {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+.module-row .module-toggle { flex: 1; }
+.module-rename {
+  width: 44px;
+  background: #f0eaf9;
+  border-radius: 14px;
+  font-size: 16px;
+  border: 2px solid #e0d4f5;
+}
+.module-rename:active { transform: scale(0.95); }
+
+.module-toggles {
+  grid-template-columns: 1fr !important;
+}
+
 /* ===== תגית "חוזרת" ===== */
 .repeat-tag {
   display: inline-block;

@@ -16,6 +16,7 @@ const defaultState = {
     city: '', notifications: false, lastNotifyCheck: null, apiKey: '',
     firebaseConfig: '', familyCode: '',
     modules: { appointments: true, meds: true, tests: true, birthdays: true, shabbat: true, notes: true },
+    moduleLabels: {},
     calendarView: 'month' // 'month' | 'list'
   }
 };
@@ -136,17 +137,27 @@ function repeatMatches(appt, targetISO) {
 
 // ===== ניווט =====
 const screens = document.querySelectorAll('.screen');
-const screenTitles = {
-  home: 'היומן שלי',
+const DEFAULT_LABELS = {
   appointments: 'יומן פגישות',
   meds: 'תרופות',
   tests: 'בדיקות דם',
   birthdays: 'ימי הולדת',
   shabbat: 'ארוחת שבת',
-  notes: 'פתקים שלי',
+  notes: 'פתקים שלי'
+};
+function getModuleLabel(key) {
+  return state.settings.moduleLabels?.[key] || DEFAULT_LABELS[key] || key;
+}
+const screenTitles = new Proxy({
+  home: 'היומן שלי',
   settings: 'הגדרות',
   day: 'פירוט יום'
-};
+}, {
+  get(target, prop) {
+    if (prop in target) return target[prop];
+    return getModuleLabel(prop);
+  }
+});
 
 // מצב לוח שנה
 let calCursor = (() => { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d; })();
@@ -572,6 +583,11 @@ function applyModuleVisibility() {
   const mods = state.settings.modules || {};
   document.querySelectorAll('[data-go]').forEach(btn => {
     const target = btn.dataset.go;
+    if (DEFAULT_LABELS[target]) {
+      // עדכון התווית של הכפתור לשם מותאם אם יש
+      const labelEl = btn.querySelector('.menu-label');
+      if (labelEl) labelEl.textContent = getModuleLabel(target);
+    }
     if (mods[target] === false) btn.style.display = 'none';
     else btn.style.display = '';
   });
@@ -582,18 +598,21 @@ function renderModuleToggles() {
   if (!container) return;
   const mods = state.settings.modules || {};
   const items = [
-    {key:'appointments', label:'יומן פגישות', icon:'📅'},
-    {key:'meds', label:'תרופות', icon:'💊'},
-    {key:'tests', label:'בדיקות דם', icon:'🩸'},
-    {key:'birthdays', label:'ימי הולדת', icon:'🎂'},
-    {key:'shabbat', label:'ארוחת שבת', icon:'🕯️'},
-    {key:'notes', label:'פתקים', icon:'📝'}
+    {key:'appointments', icon:'📅'},
+    {key:'meds', icon:'💊'},
+    {key:'tests', icon:'🩸'},
+    {key:'birthdays', icon:'🎂'},
+    {key:'shabbat', icon:'🕯️'},
+    {key:'notes', icon:'📝'}
   ];
   container.innerHTML = items.map(it => `
-    <button class="module-toggle ${mods[it.key] !== false ? 'on' : ''}" data-toggle-module="${it.key}">
-      <span class="toggle-icon">${it.icon}</span>
-      <span>${it.label}</span>
-    </button>
+    <div class="module-row">
+      <button class="module-toggle ${mods[it.key] !== false ? 'on' : ''}" data-toggle-module="${it.key}">
+        <span class="toggle-icon">${it.icon}</span>
+        <span class="module-label-text">${escapeHtml(getModuleLabel(it.key))}</span>
+      </button>
+      <button class="module-rename" data-rename-module="${it.key}" aria-label="שינוי שם">✏️</button>
+    </div>
   `).join('');
 }
 
@@ -1184,6 +1203,26 @@ document.addEventListener('click', (e) => {
     saveState();
     renderModuleToggles();
     showToast(state.settings.modules[key] ? 'הופעל' : 'כובה');
+    return;
+  }
+
+  // שינוי שם מודול
+  const renameMod = e.target.closest('[data-rename-module]');
+  if (renameMod) {
+    const key = renameMod.dataset.renameModule;
+    const current = getModuleLabel(key);
+    const newName = prompt('שינוי שם המודול:\n(השאר ריק כדי לחזור לברירת מחדל)', current);
+    if (newName === null) return; // ביטול
+    state.settings.moduleLabels = state.settings.moduleLabels || {};
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === DEFAULT_LABELS[key]) {
+      delete state.settings.moduleLabels[key];
+    } else {
+      state.settings.moduleLabels[key] = trimmed;
+    }
+    saveState();
+    renderModuleToggles();
+    showToast('שם עודכן');
     return;
   }
 });
