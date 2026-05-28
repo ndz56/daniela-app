@@ -503,6 +503,7 @@ function renderAppointmentsList() {
           ${a.note ? `<div class="item-sub">${escapeHtml(a.note)}</div>` : ''}
           ${a.repeat && a.repeat !== 'none' ? `<div class="repeat-tag">🔁 ${REPEAT_LABELS[a.repeat]}</div>` : ''}
         </div>
+        <button class="item-action edit" data-edit="appointment" data-id="${a.originalId || a.id}" aria-label="עריכה">✏️</button>
         <button class="item-action delete" data-del="appointment" data-id="${a.originalId || a.id}" aria-label="מחיקה">🗑️</button>
       </div>
     `;
@@ -694,6 +695,7 @@ function renderDayScreen() {
             ${a.note ? `<div class="item-sub">${escapeHtml(a.note)}</div>` : ''}
             ${a.repeat && a.repeat !== 'none' ? `<div class="repeat-tag">🔁 ${REPEAT_LABELS[a.repeat]}</div>` : ''}
           </div>
+          <button class="item-action edit" data-edit="appointment" data-id="${a.id}" aria-label="עריכה">✏️</button>
           <button class="item-action delete" data-del="appointment" data-id="${a.id}" aria-label="מחיקה">🗑️</button>
         </div>`;
       }
@@ -774,6 +776,7 @@ function renderMeds() {
         <div class="item-sub">${m.time ? 'בשעה ' + escapeHtml(m.time) : 'כל יום'}</div>
       </div>
       <button class="item-action ${taken ? 'checked' : 'check'}" data-toggle-med="${m.id}" aria-label="${taken ? 'לקחתי' : 'סמני כלקחתי'}">${taken ? '✓' : '○'}</button>
+      <button class="item-action edit" data-edit="med" data-id="${m.id}" aria-label="עריכה">✏️</button>
       <button class="item-action delete" data-del="med" data-id="${m.id}" aria-label="מחיקה">🗑️</button>
     </div>`;
   }).join('');
@@ -791,6 +794,7 @@ function renderTests() {
         ${t.location ? `<div class="item-sub">📍 ${escapeHtml(t.location)}</div>` : ''}
         ${t.note ? `<div class="item-sub">${escapeHtml(t.note)}</div>` : ''}
       </div>
+      <button class="item-action edit" data-edit="test" data-id="${t.id}" aria-label="עריכה">✏️</button>
       <button class="item-action delete" data-del="test" data-id="${t.id}" aria-label="מחיקה">🗑️</button>
     </div>
   `).join('');
@@ -837,6 +841,7 @@ function renderBirthdays() {
         <div class="item-sub">תאריך לועזי: ${escapeHtml(gregStr || shortDateHe(b.date))}</div>
         <div class="item-sub">היום הולדת הבא: ${formatDateHe(b.nextGreg)}</div>
       </div>
+      <button class="item-action edit" data-edit="birthday" data-id="${b.id}" aria-label="עריכה">✏️</button>
       <button class="item-action delete" data-del="birthday" data-id="${b.id}" aria-label="מחיקה">🗑️</button>
     </div>
   `;}).join('');
@@ -856,6 +861,7 @@ function renderNotes() {
         ${audioHtml}
         <div class="item-sub">${new Date(n.createdAt).toLocaleString('he-IL')}</div>
       </div>
+      ${!n.audio ? `<button class="item-action edit" data-edit="note" data-id="${n.id}" aria-label="עריכה">✏️</button>` : ''}
       <button class="item-action delete" data-del="note" data-id="${n.id}" aria-label="מחיקה">🗑️</button>
     </div>
   `;}).join('');
@@ -973,6 +979,7 @@ function renderCustomModule(cmId) {
           ${it.date ? `<div class="item-sub">${formatDateHe(it.date)}</div>` : ''}
           ${it.note ? `<div class="item-sub">${escapeHtml(it.note)}</div>` : ''}
         </div>
+        <button class="item-action edit" data-custom-edit="${cm.id}" data-item-id="${it.id}" aria-label="עריכה">✏️</button>
         <button class="item-action delete" data-custom-del="${cm.id}" data-item-id="${it.id}" aria-label="מחיקה">🗑️</button>
       </div>
     `).join('');
@@ -1066,6 +1073,7 @@ function renderFitness() {
         <div class="item-sub">${formatDateHe(f.date)}${f.duration ? ' • ' + escapeHtml(f.duration) + ' דק׳' : ''}${f.distance ? ' • ' + escapeHtml(f.distance) + ' ק"מ' : ''}</div>
         ${f.note ? `<div class="item-sub">${escapeHtml(f.note)}</div>` : ''}
       </div>
+      <button class="item-action edit" data-edit="fitness" data-id="${f.id}" aria-label="עריכה">✏️</button>
       <button class="item-action delete" data-del="fitness" data-id="${f.id}" aria-label="מחיקה">🗑️</button>
     </div>
   `).join('');
@@ -1310,6 +1318,35 @@ document.addEventListener('click', (e) => {
   if (t) suggestShabbat(t.dataset.shabbatType);
 });
 
+// ===== עריכת פריט =====
+document.addEventListener('click', (e) => {
+  const ed = e.target.closest('[data-edit]');
+  if (ed) {
+    const type = ed.dataset.edit;
+    const id = ed.dataset.id;
+    let item;
+    if (type === 'appointment') item = state.appointments.find(x => x.id === id);
+    if (type === 'med')         item = state.meds.find(x => x.id === id);
+    if (type === 'test')        item = state.tests.find(x => x.id === id);
+    if (type === 'birthday')    item = state.birthdays.find(x => x.id === id);
+    if (type === 'note')        item = state.notes.find(x => x.id === id);
+    if (type === 'fitness')     item = state.fitness.find(x => x.id === id);
+    if (item) openEdit(type, item);
+    return;
+  }
+  const edCustom = e.target.closest('[data-custom-edit]');
+  if (edCustom) {
+    const cmId = edCustom.dataset.customEdit;
+    const itemId = edCustom.dataset.itemId;
+    const cm = (state.customModules || []).find(x => x.id === cmId);
+    if (cm) {
+      const it = cm.items.find(x => x.id === itemId);
+      if (it) openEditCustom(cmId, it);
+    }
+    return;
+  }
+});
+
 // ===== מחיקה וסימון =====
 document.addEventListener('click', (e) => {
   const del = e.target.closest('[data-del]');
@@ -1425,8 +1462,31 @@ const ADD_CONFIGS = {
   }
 };
 
+let currentEditId = null; // אם מוגדר - אנחנו עורכים, לא מוסיפים
+
+function openEdit(type, item) {
+  currentEditId = item.id;
+  openAdd(type, item);
+  // החלפת כותרת
+  const cfg = ADD_CONFIGS[type];
+  if (cfg) modalTitle.textContent = '✏️ עריכה: ' + cfg.title.replace('הוספת ','').replace('הוספה','');
+}
+
+function openEditCustom(cmId, item) {
+  currentEditId = item.id;
+  openCustomAdd(cmId);
+  modalTitle.textContent = '✏️ עריכת פריט';
+  // מילוי השדות מהפריט
+  const form = document.getElementById('modalForm');
+  Object.entries(item).forEach(([k, v]) => {
+    const field = form.querySelector(`[name="${k}"]`);
+    if (field && v != null) field.value = v;
+  });
+}
+
 function openAdd(type, prefill = {}) {
   currentAdd = type;
+  if (!currentEditId) currentEditId = null;
   const cfg = ADD_CONFIGS[type];
   modalTitle.textContent = cfg.title;
   modalFields.innerHTML = cfg.fields.map(f => {
@@ -1503,7 +1563,7 @@ document.addEventListener('click', (e) => {
   if (e.target.id === 'modalCancel' || e.target === modal) closeModal();
 });
 
-function closeModal() { modal.classList.add('hidden'); currentAdd = null; }
+function closeModal() { modal.classList.add('hidden'); currentAdd = null; currentEditId = null; }
 
 modalForm.addEventListener('submit', (e) => {
   e.preventDefault();
@@ -1521,18 +1581,30 @@ modalForm.addEventListener('submit', (e) => {
   // ניקוי שדות עזר __dmy_*
   Object.keys(data).filter(k => k.startsWith('__dmy_')).forEach(k => delete data[k]);
   if (!currentAdd) return;
-  if (currentAdd === 'appointment') state.appointments.push({ id: uid(), ...data, repeat: data.repeat || 'none' });
-  if (currentAdd === 'med')         state.meds.push({ id: uid(), ...data, takenDates: [] });
-  if (currentAdd === 'test')        state.tests.push({ id: uid(), ...data });
-  if (currentAdd === 'birthday')    state.birthdays.push({ id: uid(), ...data });
-  if (currentAdd === 'note')        state.notes.push({ id: uid(), text: data.text, createdAt: Date.now() });
-  if (currentAdd === 'fitness')     state.fitness.push({ id: uid(), ...data, createdAt: Date.now() });
+  const editing = currentEditId;
+  function updateOrPush(arr, newObj) {
+    if (editing) {
+      const idx = arr.findIndex(x => x.id === editing);
+      if (idx !== -1) {
+        // שומרים שדות שאסור לאבד (createdAt, takenDates)
+        const existing = arr[idx];
+        arr[idx] = { ...existing, ...newObj, id: existing.id };
+      }
+    } else {
+      arr.push({ id: uid(), ...newObj });
+    }
+  }
+
+  if (currentAdd === 'appointment') updateOrPush(state.appointments, { ...data, repeat: data.repeat || 'none' });
+  if (currentAdd === 'med')         updateOrPush(state.meds, { ...data, takenDates: [] });
+  if (currentAdd === 'test')        updateOrPush(state.tests, data);
+  if (currentAdd === 'birthday')    updateOrPush(state.birthdays, data);
+  if (currentAdd === 'note')        updateOrPush(state.notes, { text: data.text, createdAt: Date.now() });
+  if (currentAdd === 'fitness')     updateOrPush(state.fitness, { ...data, createdAt: Date.now() });
   if (currentAdd && currentAdd.startsWith('custom:')) {
     const cmId = currentAdd.slice(7);
     const cm = (state.customModules || []).find(x => x.id === cmId);
-    if (cm) {
-      cm.items.push({ id: uid(), ...data, createdAt: Date.now() });
-    }
+    if (cm) updateOrPush(cm.items, { ...data, createdAt: Date.now() });
   }
   saveState();
   const wasCustom = currentAdd && currentAdd.startsWith('custom:');

@@ -201,6 +201,7 @@ h1, h2, h3 { margin: 0; font-weight: 800; }
 }
 
 .item-card .item-action.delete { background: #ffe5e5; color: #c0392b; }
+.item-card .item-action.edit { background: #fff4d6; color: #b8860b; }
 .item-card .item-action.check { background: #e7f7e8; color: #27ae60; }
 .item-card .item-action.checked { background: #27ae60; color: white; }
 
