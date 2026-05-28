@@ -1,0 +1,15 @@
+# Build artifacts
+daniela-app.zip
+
+# Local Claude settings (may contain machine-specific paths)
+.claude/settings.local.json
+
+# Dependencies (we don't use any)
+node_modules/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

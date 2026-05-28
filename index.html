@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#7b5cd6" />
+  <title>היומן של דניאלה</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/@hebcal/core@5/dist/bundle.min.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <button id="backBtn" class="back-btn" aria-label="חזרה" hidden>›</button>
+    <h1 id="screenTitle">היומן שלי</h1>
+    <button id="settingsBtn" class="settings-btn" aria-label="הגדרות">⚙</button>
+  </header>
+
+  <main id="app">
+    <!-- מסך הבית -->
+    <section class="screen active" data-screen="home">
+      <div class="today-card">
+        <div class="today-date" id="todayDate">—</div>
+        <div class="today-hebrew" id="todayHebrew">—</div>
+        <div class="today-shabbat" id="todayShabbat"></div>
+      </div>
+
+      <div class="today-summary" id="todaySummary">
+        <!-- ייכנס דינמי -->
+      </div>
+
+      <div class="menu-grid">
+        <button class="menu-btn" data-go="appointments">
+          <span class="menu-icon">📅</span>
+          <span class="menu-label">פגישות</span>
+        </button>
+        <button class="menu-btn" data-go="meds">
+          <span class="menu-icon">💊</span>
+          <span class="menu-label">תרופות</span>
+        </button>
+        <button class="menu-btn" data-go="tests">
+          <span class="menu-icon">🩸</span>
+          <span class="menu-label">בדיקות דם</span>
+        </button>
+        <button class="menu-btn" data-go="birthdays">
+          <span class="menu-icon">🎂</span>
+          <span class="menu-label">ימי הולדת</span>
+        </button>
+        <button class="menu-btn" data-go="shabbat">
+          <span class="menu-icon">🕯️</span>
+          <span class="menu-label">ארוחת שבת</span>
+        </button>
+        <button class="menu-btn" data-go="notes">
+          <span class="menu-icon">📝</span>
+          <span class="menu-label">פתקים שלי</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- פגישות -->
+    <section class="screen" data-screen="appointments">
+      <div class="calendar-header">
+        <button id="calPrev" class="cal-nav" aria-label="חודש קודם">‹</button>
+        <div id="calTitle" class="cal-title">—</div>
+        <button id="calNext" class="cal-nav" aria-label="חודש הבא">›</button>
+        <button id="calToggle" class="cal-toggle" aria-label="החלפת תצוגה">≡</button>
+      </div>
+      <div id="calMonthView" class="cal-month-view">
+        <div class="cal-weekdays">
+          <div>א'</div><div>ב'</div><div>ג'</div><div>ד'</div><div>ה'</div><div>ו'</div><div>ש'</div>
+        </div>
+        <div id="calGrid" class="cal-grid"></div>
+      </div>
+      <div id="calListView" class="list-wrap" hidden>
+        <div id="appointmentsList" class="item-list"></div>
+      </div>
+      <button class="add-btn" data-add="appointment">+ הוספת פגישה</button>
+    </section>
+
+    <!-- מסך יום (מתוך לחיצה בלוח) -->
+    <section class="screen" data-screen="day">
+      <div class="list-wrap">
+        <div id="dayHeader" class="today-card" style="background:linear-gradient(135deg,#9c7eea,#c499f5)"></div>
+        <div id="dayEvents" class="item-list" style="margin-top:18px"></div>
+        <button id="dayAddBtn" class="full-btn" style="margin-top:10px">+ הוספת פגישה ליום זה</button>
+      </div>
+    </section>
+
+    <!-- תרופות -->
+    <section class="screen" data-screen="meds">
+      <div class="list-wrap">
+        <p class="hint">סמני ✓ אחרי שלקחת תרופה היום</p>
+        <div id="medsList" class="item-list"></div>
+        <button class="add-btn" data-add="med">+ הוספת תרופה</button>
+      </div>
+    </section>
+
+    <!-- בדיקות דם -->
+    <section class="screen" data-screen="tests">
+      <div class="list-wrap">
+        <div id="testsList" class="item-list"></div>
+        <button class="add-btn" data-add="test">+ הוספת בדיקה</button>
+      </div>
+    </section>
+
+    <!-- ימי הולדת -->
+    <section class="screen" data-screen="birthdays">
+      <div class="list-wrap">
+        <div id="birthdaysList" class="item-list"></div>
+        <button class="add-btn" data-add="birthday">+ הוספת יום הולדת</button>
+      </div>
+    </section>
+
+    <!-- ארוחת שבת -->
+    <section class="screen" data-screen="shabbat">
+      <div class="list-wrap">
+        <div class="shabbat-intro">
+          <p>בואי נחשוב על ארוחת השבת. איזו ארוחה את מתכננת?</p>
+        </div>
+        <div class="shabbat-choices">
+          <button class="choice-btn" data-shabbat-type="בשרי">🍗 בשרי</button>
+          <button class="choice-btn" data-shabbat-type="חלבי">🥛 חלבי</button>
+          <button class="choice-btn" data-shabbat-type="פרווה">🥗 פרווה</button>
+        </div>
+        <button id="aiSuggestBtn" class="full-btn" style="margin-bottom:14px" hidden>✨ הצעה חדשה מ-AI</button>
+        <div id="shabbatSuggestions" class="shabbat-suggestions"></div>
+      </div>
+    </section>
+
+    <!-- הגדרות -->
+    <section class="screen" data-screen="settings">
+      <div class="list-wrap">
+        <div class="settings-block">
+          <h3>🧩 מודולים פעילים</h3>
+          <p class="hint" style="text-align:right">בחרי אילו כפתורים יופיעו במסך הבית. כיבוי מודול מסתיר אותו אבל לא מוחק נתונים.</p>
+          <div id="moduleToggles" class="module-toggles"></div>
+        </div>
+
+        <div class="settings-block">
+          <h3>🔔 תזכורות</h3>
+          <p class="hint" style="text-align:right">קבלי התראה אוטומטית על תרופות ופגישות.</p>
+          <button id="enableNotifyBtn" class="full-btn">הפעלת התראות</button>
+          <div id="notifyStatus" class="hint" style="text-align:right"></div>
+        </div>
+
+        <div class="settings-block">
+          <h3>☁️ סנכרון בין מכשירים</h3>
+          <p class="hint" style="text-align:right">חיבור לענן Firebase כדי לשתף נתונים בין הטלפון של דניאלה לטלפון שלך.</p>
+
+          <div id="syncDisconnected">
+            <label style="display:block;font-weight:700;color:#4a2e9c;margin-top:8px">קוד משפחה (אותו קוד בשני המכשירים):</label>
+            <input type="text" id="familyCodeInput" placeholder="לדוגמה: yoman-david-daniela" class="full-select" autocomplete="off" />
+
+            <label style="display:block;font-weight:700;color:#4a2e9c;margin-top:8px">הגדרות Firebase (JSON):</label>
+            <textarea id="firebaseConfigInput" placeholder='{"apiKey":"...","projectId":"...","authDomain":"...","appId":"..."}' class="full-select" style="min-height:100px;font-family:monospace;font-size:13px;direction:ltr;text-align:left"></textarea>
+
+            <button id="connectSyncBtn" class="full-btn">חיבור לסנכרון</button>
+            <details style="margin-top:12px">
+              <summary style="cursor:pointer;font-weight:700;color:#4a2e9c">איך מקבלים את ההגדרות? (5 דקות)</summary>
+              <ol style="text-align:right;margin:10px 0;padding-inline-start:24px;font-size:15px;line-height:1.7">
+                <li>גש ל-<a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a> (התחבר עם Gmail)</li>
+                <li>לחץ <b>"Add project"</b> → תן שם (לדוגמה: yoman) → הבא → ביטול Analytics → צור</li>
+                <li>במסך הראשי לחץ על האייקון <b>&lt;/&gt;</b> (Web) → תן שם אפליקציה → רישום</li>
+                <li>תראה קוד עם <code>firebaseConfig = {...}</code> - העתק רק את החלק בתוך הסוגריים המסולסלים</li>
+                <li>בתפריט הצד: <b>Build → Firestore Database</b> → <b>Create database</b> → Production mode → בחר אזור (europe-west) → הפעל</li>
+                <li>בלשונית <b>Rules</b> של Firestore - תחליף הכל ב:<br><code style="font-size:12px;direction:ltr">rules_version='2';<br>service cloud.firestore {<br>&nbsp;&nbsp;match /databases/{db}/documents {<br>&nbsp;&nbsp;&nbsp;&nbsp;match /families/{f} {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;allow read, write: if request.auth != null;<br>&nbsp;&nbsp;&nbsp;&nbsp;}<br>&nbsp;&nbsp;}<br>}</code> ולחץ Publish</li>
+                <li>בתפריט הצד: <b>Build → Authentication</b> → <b>Get started</b> → לשונית <b>Sign-in method</b> → <b>Anonymous</b> → Enable → Save</li>
+                <li>חזור לכאן, הדבק את ה-config בשדה למעלה ולחץ "חיבור לסנכרון"</li>
+                <li>בטלפון של דניאלה - הזיני את <b>אותו קוד משפחה</b> ואת <b>אותו config</b> - והנתונים יסונכרנו!</li>
+              </ol>
+            </details>
+          </div>
+
+          <div id="syncConnected" hidden>
+            <div style="background:#e7f7e8;color:#27ae60;padding:14px;border-radius:14px;margin-top:8px">
+              <div style="font-weight:700">✓ מסונכרן עם הענן</div>
+              <div id="syncFamily" style="font-size:14px;margin-top:4px"></div>
+              <div id="syncLastUpdate" style="font-size:13px;margin-top:2px;opacity:0.8"></div>
+            </div>
+            <button id="disconnectSyncBtn" class="full-btn light">ניתוק מהסנכרון</button>
+          </div>
+
+          <div id="syncStatus" class="hint" style="text-align:right"></div>
+        </div>
+
+        <div class="settings-block">
+          <h3>💾 גיבוי ושחזור</h3>
+          <p class="hint" style="text-align:right">שמירת עותק של כל הנתונים לקובץ במחשב/בטלפון, או טעינה מקובץ קיים.</p>
+          <button id="exportBtn" class="full-btn">שמירת גיבוי לקובץ</button>
+          <button id="importBtn" class="full-btn light">טעינת גיבוי מקובץ</button>
+          <input type="file" id="importFile" accept="application/json" hidden />
+        </div>
+
+        <div class="settings-block">
+          <h3>🕯️ זמני שבת ואזור</h3>
+          <p class="hint" style="text-align:right">בחירת עיר כדי להציג זמן כניסת שבת</p>
+          <select id="citySelect" class="full-select">
+            <option value="">— ללא —</option>
+            <option value="Jerusalem">ירושלים</option>
+            <option value="Tel Aviv">תל אביב</option>
+            <option value="Haifa">חיפה</option>
+            <option value="Beer Sheva">באר שבע</option>
+            <option value="Netanya">נתניה</option>
+            <option value="Petah Tikva">פתח תקווה</option>
+            <option value="Rishon LeZion">ראשון לציון</option>
+            <option value="Ashdod">אשדוד</option>
+            <option value="Bnei Brak">בני ברק</option>
+            <option value="Rehovot">רחובות</option>
+          </select>
+        </div>
+
+        <div class="settings-block">
+          <h3>✨ הצעות AI לארוחת שבת</h3>
+          <p class="hint" style="text-align:right">הדבק כאן מפתח Anthropic API כדי לקבל הצעות ארוחה דינמיות. אפשר גם בלי - יש הצעות מובנות באפליקציה.</p>
+          <input type="password" id="apiKeyInput" placeholder="sk-ant-..." class="full-select" autocomplete="off" />
+          <button id="saveApiKeyBtn" class="full-btn">שמירת המפתח</button>
+          <div id="apiKeyStatus" class="hint" style="text-align:right"></div>
+          <details style="margin-top:12px">
+            <summary style="cursor:pointer;font-weight:700;color:#4a2e9c">איך מקבלים מפתח? (3 דקות)</summary>
+            <ol style="text-align:right;margin:10px 0;padding-inline-start:24px;font-size:15px;line-height:1.7">
+              <li>גש ל-<a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a></li>
+              <li>הירשם בכתובת מייל (יש $5 קרדיט חינם להתחלה)</li>
+              <li>בתפריט הצד: "API Keys" → "Create Key"</li>
+              <li>העתק את המפתח (מתחיל ב-sk-ant-) והדבק כאן</li>
+              <li>עלות מוערכת לשימוש אישי: פחות מ-$1 לחודש</li>
+            </ol>
+            <p class="hint" style="text-align:right">⚠ המפתח נשמר רק במכשיר שלך, לא בשרת. אל תשתף אותו.</p>
+          </details>
+        </div>
+
+        <div class="settings-block muted">
+          <h3>על האפליקציה</h3>
+          <p>היומן של דניאלה — גרסה 1.0<br/>נבנה במיוחד בשבילך 💜</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- פתקים -->
+    <section class="screen" data-screen="notes">
+      <div class="list-wrap">
+        <div id="notesList" class="item-list"></div>
+        <button class="add-btn" data-add="note">+ פתק חדש</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- מודאל הוספה -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <h2 id="modalTitle">הוספה</h2>
+      <form id="modalForm">
+        <div id="modalFields"></div>
+        <div class="modal-actions">
+          <button type="submit" class="primary-btn">שמירה</button>
+          <button type="button" class="cancel-btn" id="modalCancel">ביטול</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- הודעת אישור -->
+  <div id="toast" class="toast hidden"></div>
+</body>
+</html>

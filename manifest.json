@@ -1,0 +1,20 @@
+{
+  "name": "היומן של דניאלה",
+  "short_name": "היומן שלי",
+  "description": "יומן אישי - פגישות, תרופות, בדיקות, ימי הולדת וארוחות שבת",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5efff",
+  "theme_color": "#7b5cd6",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
