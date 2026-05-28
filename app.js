@@ -348,33 +348,31 @@ function getShabbatInfo() {
         if (ev) {
           const renderHe = ev.renderBrief('he');
           const holidayStr = i === 0 ? `🎉 היום: ${renderHe}` : `🎉 בעוד ${i} ימים: ${renderHe}`;
-          // אם זה גם שישי/שבת - נוסיף גם פרשה
-          if (dayOfWeek === 5 || dayOfWeek === 6) {
+          // הוספת פרשה רק ביום שישי
+          if (dayOfWeek === 5) {
             const parsha = getThisWeekParasha();
-            return parsha ? holidayStr + ' • ' + parsha : holidayStr;
+            return parsha ? holidayStr + ' • 📖 ' + parsha : holidayStr;
           }
           return holidayStr;
         }
       }
     }
 
-    // זמני שבת - רק בשישי/שבת
+    // ימי חול (ראשון-חמישי) - לא מציג זמני שבת ולא פרשה
     if (dayOfWeek !== 5 && dayOfWeek !== 6) {
-      // ימי חול - נציג רק את הפרשה
-      const parsha = getThisWeekParasha();
-      return parsha ? '📖 ' + parsha : '';
+      return '';
     }
 
     const sh = getNextShabbatTimes();
     if (!sh) return '';
-    const parsha = getThisWeekParasha();
     const candleStr = fmtTime(sh.candles);
     const havStr = fmtTime(sh.havdalah);
     if (dayOfWeek === 6) {
-      const p = parsha ? `📖 ${parsha} • ` : '';
-      return `${p}🕯️ שבת שלום! יציאה ${havStr}`;
+      // שבת - בלי פרשה (לפי בקשה)
+      return `🕯️ שבת שלום! יציאה ${havStr}`;
     }
-    // יום שישי
+    // יום שישי - מציג פרשה + זמני שבת
+    const parsha = getThisWeekParasha();
     const p = parsha ? `📖 ${parsha} • ` : '';
     return `${p}🕯️ כניסה ${candleStr} | יציאה ${havStr}`;
   } catch { return ''; }
