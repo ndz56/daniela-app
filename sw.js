@@ -1,5 +1,5 @@
 // Service Worker בסיסי - יאפשר עבודה גם ללא אינטרנט
-const CACHE = 'daniela-v5';
+const CACHE = 'daniela-v6';
 const ASSETS = [
   './',
   './index.html',

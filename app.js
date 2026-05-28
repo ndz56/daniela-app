@@ -266,8 +266,10 @@ function renderAppointments() {
   document.getElementById('calWeekView').hidden = view !== 'week';
   document.getElementById('calListView').hidden = view !== 'list';
   // הסתרת ניווט חודש בתצוגות אחרות
-  document.getElementById('calPrev').style.visibility = view === 'month' ? '' : 'hidden';
-  document.getElementById('calNext').style.visibility = view === 'month' ? '' : 'hidden';
+  const showNav = view === 'month';
+  document.getElementById('calPrev').style.visibility = showNav ? '' : 'hidden';
+  document.getElementById('calNext').style.visibility = showNav ? '' : 'hidden';
+  document.getElementById('calToday').style.visibility = showNav ? '' : 'hidden';
   if (view === 'month') renderCalendarMonth();
   else if (view === 'week') renderWeekView();
   else renderAppointmentsList();
@@ -332,20 +334,35 @@ function renderWeekView() {
 function renderAppointmentsList() {
   const list = document.getElementById('appointmentsList');
   const today = todayISO();
-  // לוקח פגישות עתידיות + מרחיב חוזרות לחזרות הקרובות
-  const expanded = expandUpcomingAppointments(today, 90);
-  if (expanded.length === 0) { list.innerHTML = emptyMsg('אין פגישות מתוכננות ל-90 הימים הבאים.'); return; }
-  list.innerHTML = expanded.map(a => `
-    <div class="item-card">
-      <div class="item-main">
-        <div class="item-title">${escapeHtml(a.title)}</div>
-        <div class="item-sub">${formatDateHe(a.date)}${a.time ? ' • ' + escapeHtml(a.time) : ''}${a.who ? ' • ' + escapeHtml(a.who) : ''}</div>
-        ${a.note ? `<div class="item-sub">${escapeHtml(a.note)}</div>` : ''}
-        ${a.repeat && a.repeat !== 'none' ? `<div class="repeat-tag">🔁 ${REPEAT_LABELS[a.repeat]}</div>` : ''}
+  // איסוף כל הפגישות החד-פעמיות העתידיות + 365 חזרות קדימה לחוזרות
+  const oneTime = state.appointments.filter(a => (!a.repeat || a.repeat === 'none') && a.date >= today);
+  const recurring = expandUpcomingAppointments(today, 365).filter(a => a.repeat && a.repeat !== 'none');
+  const all = [...oneTime, ...recurring].sort((a,b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+  if (all.length === 0) { list.innerHTML = emptyMsg('אין פגישות עתידיות. אפשר להוסיף בכפתור למטה.'); return; }
+
+  // קיבוץ לפי חודש
+  let html = '';
+  let currentMonth = '';
+  all.forEach(a => {
+    const [y, m] = a.date.split('-');
+    const mKey = `${y}-${m}`;
+    if (mKey !== currentMonth) {
+      currentMonth = mKey;
+      html += `<div class="list-month-header">${HE_MONTHS[Number(m)-1]} ${y}</div>`;
+    }
+    html += `
+      <div class="item-card">
+        <div class="item-main">
+          <div class="item-title">${escapeHtml(a.title)}</div>
+          <div class="item-sub">${formatDateHe(a.date)}${a.time ? ' • ' + escapeHtml(a.time) : ''}${a.who ? ' • ' + escapeHtml(a.who) : ''}</div>
+          ${a.note ? `<div class="item-sub">${escapeHtml(a.note)}</div>` : ''}
+          ${a.repeat && a.repeat !== 'none' ? `<div class="repeat-tag">🔁 ${REPEAT_LABELS[a.repeat]}</div>` : ''}
+        </div>
+        <button class="item-action delete" data-del="appointment" data-id="${a.originalId || a.id}" aria-label="מחיקה">🗑️</button>
       </div>
-      <button class="item-action delete" data-del="appointment" data-id="${a.originalId || a.id}" aria-label="מחיקה">🗑️</button>
-    </div>
-  `).join('');
+    `;
+  });
+  list.innerHTML = html;
 }
 
 function expandUpcomingAppointments(fromISO, daysAhead = 90) {
@@ -1022,6 +1039,11 @@ document.addEventListener('click', (e) => {
   // ניווט בלוח
   if (e.target.id === 'calPrev') { calCursor.setMonth(calCursor.getMonth()-1); renderCalendarMonth(); return; }
   if (e.target.id === 'calNext') { calCursor.setMonth(calCursor.getMonth()+1); renderCalendarMonth(); return; }
+  if (e.target.id === 'calToday') {
+    calCursor = (() => { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d; })();
+    renderCalendarMonth();
+    return;
+  }
   if (e.target.id === 'calToggle') {
     const order = ['month', 'week', 'list'];
     const cur = state.settings.calendarView || 'month';

@@ -483,6 +483,27 @@ textarea.full-select { resize: vertical; }
 
 .cal-toggle { font-size: 20px; }
 
+.cal-today-btn {
+  padding: 0 14px;
+  height: 36px;
+  border-radius: 12px;
+  background: rgba(123,92,214,0.1);
+  color: #7b5cd6;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.list-month-header {
+  font-size: 17px;
+  font-weight: 800;
+  color: #4a2e9c;
+  margin: 18px 0 10px;
+  padding-inline-end: 4px;
+  border-inline-end: 4px solid #7b5cd6;
+  padding-inline-end: 12px;
+}
+.list-month-header:first-child { margin-top: 4px; }
+
 .cal-month-view { padding: 0 14px; }
 
 .cal-weekdays {
