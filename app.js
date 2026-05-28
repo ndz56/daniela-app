@@ -831,15 +831,31 @@ function renderBirthdays() {
   }).sort((a,b) => a.nextGreg.localeCompare(b.nextGreg));
 
   list.innerHTML = enriched.map(b => {
-    const hebStr = b.calendar === 'hebrew' ? gregorianToHebrew(b.date) : gregorianToHebrew(b.date);
-    const gregStr = b.calendar === 'hebrew' ? shortDateHe(hebrewBirthdayThisYear(b.date) || '') : shortDateHe(b.date);
+    // תאריך לידה מקורי - תמיד מהשדה b.date שנשמר (הוא בפורמט YYYY-MM-DD גרגוריאני)
+    const origGreg = shortDateHe(b.date);
+    const origHeb = gregorianToHebrew(b.date);
+
+    // תאריך הולדת הבא - לפי בחירת לוח: עברי או לועזי
+    const nextGreg = b.nextGreg;
+    const nextHeb = gregorianToHebrew(nextGreg);
+
+    // חישוב גיל
+    const [by, bm, bd] = b.date.split('-').map(Number);
+    const today = new Date();
+    let age = today.getFullYear() - by;
+    if (today.getMonth()+1 < bm || (today.getMonth()+1 === bm && today.getDate() < bd)) age--;
+
+    const trackByLabel = b.calendar === 'hebrew' ? '🕎 לפי לוח עברי' : '📅 לפי לוח לועזי';
+
     return `
     <div class="item-card">
       <div class="item-main">
-        <div class="item-title">🎂 ${escapeHtml(b.name)}</div>
-        <div class="item-sub">תאריך עברי: ${escapeHtml(hebStr)}</div>
-        <div class="item-sub">תאריך לועזי: ${escapeHtml(gregStr || shortDateHe(b.date))}</div>
-        <div class="item-sub">היום הולדת הבא: ${formatDateHe(b.nextGreg)}</div>
+        <div class="item-title">🎂 ${escapeHtml(b.name)} <span style="font-size:14px;color:#6b5e8f;font-weight:600">(גיל ${age})</span></div>
+        <div class="item-sub"><b>תאריך לידה (לועזי):</b> ${escapeHtml(origGreg)}</div>
+        <div class="item-sub"><b>תאריך לידה (עברי):</b> ${escapeHtml(origHeb)}</div>
+        <div class="item-sub" style="margin-top:6px;color:#7b5cd6"><b>יום הולדת הבא:</b> ${formatDateHe(nextGreg)}</div>
+        <div class="item-sub" style="color:#7b5cd6">${escapeHtml(nextHeb)}</div>
+        <div class="item-sub" style="font-size:13px;color:#8b7eb3;margin-top:4px">${trackByLabel}</div>
       </div>
       <button class="item-action edit" data-edit="birthday" data-id="${b.id}" aria-label="עריכה">✏️</button>
       <button class="item-action delete" data-del="birthday" data-id="${b.id}" aria-label="מחיקה">🗑️</button>
