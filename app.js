@@ -12,6 +12,7 @@ const defaultState = {
   birthdays: [],      // {id, name, date, calendar:'gregorian'|'hebrew'}
   notes: [],          // {id, text, audio?, duration?, createdAt}
   fitness: [],        // {id, category, duration, distance, note, date, createdAt}
+  customModules: [],  // [{id, name, icon, categories: [], items: [{id, title, category, date, note, createdAt}]}]
   shabbat: { type: null, lastSuggestion: null },
   settings: {
     city: '', notifications: false, lastNotifyCheck: null, apiKey: '',
@@ -167,12 +168,16 @@ const screenTitles = new Proxy({
 let calCursor = (() => { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d; })();
 let selectedDayISO = null;
 
-function showScreen(name) {
+function showScreen(name, options = {}) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.dataset.screen === name));
   document.getElementById('screenTitle').textContent = screenTitles[name] || 'היומן שלי';
   document.getElementById('backBtn').hidden = (name === 'home');
   document.getElementById('settingsBtn').hidden = (name === 'settings');
   window.scrollTo(0,0);
+  if (name === 'customModule' && options.customModuleId) {
+    renderCustomModule(options.customModuleId);
+    return;
+  }
   const renderers = {
     home: renderHome,
     appointments: renderAppointments,
@@ -190,7 +195,15 @@ function showScreen(name) {
 
 document.addEventListener('click', (e) => {
   const goBtn = e.target.closest('[data-go]');
-  if (goBtn) { showScreen(goBtn.dataset.go); return; }
+  if (goBtn) {
+    const target = goBtn.dataset.go;
+    if (target === 'customModule') {
+      showScreen('customModule', { customModuleId: goBtn.dataset.customModuleId });
+    } else {
+      showScreen(target);
+    }
+    return;
+  }
   if (e.target.closest('#backBtn')) { showScreen('home'); return; }
   if (e.target.closest('#settingsBtn')) { showScreen('settings'); return; }
 });
@@ -200,6 +213,7 @@ function renderHome() {
   const now = new Date();
   document.getElementById('todayDate').textContent = `יום ${HE_DAYS[now.getDay()]}, ${now.getDate()} ב${HE_MONTHS[now.getMonth()]}`;
   document.getElementById('todayHebrew').textContent = getHebrewDateString(now);
+  applyHomeMenuButtons();
   applyModuleVisibility();
 
   // מידע על שבת/חג
@@ -721,7 +735,7 @@ function renderModuleToggles() {
     {key:'notes', icon:'📝'},
     {key:'fitness', icon:'💪'}
   ];
-  container.innerHTML = items.map(it => `
+  const builtIn = items.map(it => `
     <div class="module-row">
       <button class="module-toggle ${mods[it.key] !== false ? 'on' : ''}" data-toggle-module="${it.key}">
         <span class="toggle-icon">${it.icon}</span>
@@ -730,6 +744,21 @@ function renderModuleToggles() {
       <button class="module-rename" data-rename-module="${it.key}" aria-label="שינוי שם">✏️</button>
     </div>
   `).join('');
+
+  const customs = (state.customModules || []).map(cm => `
+    <div class="module-row">
+      <button class="module-toggle on" data-toggle-module="custom:${cm.id}">
+        <span class="toggle-icon">${escapeHtml(cm.icon || '⭐')}</span>
+        <span class="module-label-text">${escapeHtml(cm.name)}</span>
+      </button>
+      <button class="module-rename" data-rename-custom="${cm.id}" aria-label="עריכה">✏️</button>
+      <button class="module-rename" data-delete-custom="${cm.id}" aria-label="מחיקה" style="background:#ffe5e5;color:#c0392b">🗑️</button>
+    </div>
+  `).join('');
+
+  const addBtn = `<button class="full-btn light" id="addCustomModule" style="margin-top:8px">➕ מודול חדש משלי</button>`;
+
+  container.innerHTML = builtIn + customs + addBtn;
 }
 
 function renderMeds() {
@@ -907,6 +936,105 @@ function hideRecordingUI() {
   const banner = document.getElementById('recBanner');
   if (banner) banner.remove();
 }
+
+// ===== מודולים מותאמים =====
+let currentCustomModuleId = null;
+
+function applyHomeMenuButtons() {
+  // הוספת/הסרת כפתורים של מודולים מותאמים במסך הבית
+  const grid = document.querySelector('.menu-grid');
+  if (!grid) return;
+  // הסרת כפתורי מודול מותאם קודמים
+  grid.querySelectorAll('[data-custom-module-id]').forEach(el => el.remove());
+  // הוספה לכל מודול מותאם
+  (state.customModules || []).forEach(cm => {
+    const btn = document.createElement('button');
+    btn.className = 'menu-btn';
+    btn.dataset.go = 'customModule';
+    btn.dataset.customModuleId = cm.id;
+    btn.innerHTML = `<span class="menu-icon">${escapeHtml(cm.icon || '⭐')}</span><span class="menu-label">${escapeHtml(cm.name)}</span>`;
+    grid.appendChild(btn);
+  });
+}
+
+function renderCustomModule(cmId) {
+  const cm = (state.customModules || []).find(x => x.id === cmId);
+  if (!cm) { showScreen('home'); return; }
+  currentCustomModuleId = cmId;
+  document.getElementById('screenTitle').textContent = cm.icon + ' ' + cm.name;
+  const container = document.getElementById('customModuleContent');
+  const sorted = [...cm.items].sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
+  const listHtml = sorted.length === 0
+    ? emptyMsg('אין פריטים. תוסיפי בכפתור למטה.')
+    : sorted.map(it => `
+      <div class="item-card">
+        <div class="item-main">
+          <div class="item-title">${it.category ? `<span style="background:#f0eaf9;color:#4a2e9c;padding:2px 8px;border-radius:8px;font-size:13px;font-weight:700">${escapeHtml(it.category)}</span> ` : ''}${escapeHtml(it.title)}</div>
+          ${it.date ? `<div class="item-sub">${formatDateHe(it.date)}</div>` : ''}
+          ${it.note ? `<div class="item-sub">${escapeHtml(it.note)}</div>` : ''}
+        </div>
+        <button class="item-action delete" data-custom-del="${cm.id}" data-item-id="${it.id}" aria-label="מחיקה">🗑️</button>
+      </div>
+    `).join('');
+
+  container.innerHTML = `
+    <div id="customModuleList" class="item-list">${listHtml}</div>
+    <button class="add-btn" data-custom-add="${cm.id}">+ הוספת פריט</button>
+  `;
+}
+
+function openCustomAdd(cmId) {
+  const cm = (state.customModules || []).find(x => x.id === cmId);
+  if (!cm) return;
+  currentAdd = 'custom:' + cmId;
+  modalTitle.textContent = `הוספה ל${cm.name}`;
+  const cats = cm.categories || [];
+  const categoryField = cats.length > 0
+    ? `<label>קטגוריה</label><select name="category" data-custom-cat="${cmId}">
+        ${cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
+        <option value="__add_new__">➕ הוסיפי קטגוריה חדשה...</option>
+      </select>`
+    : `<label>קטגוריה (לא חובה)</label>
+       <div style="display:flex;gap:6px">
+         <select name="category" data-custom-cat="${cmId}">
+           <option value="">— ללא —</option>
+           <option value="__add_new__">➕ הוסיפי קטגוריה חדשה...</option>
+         </select>
+       </div>`;
+  modalFields.innerHTML = `
+    <label>כותרת</label>
+    <input type="text" name="title" required placeholder="מה להוסיף?" />
+    ${categoryField}
+    <label>תאריך (לא חובה)</label>
+    <input type="date" name="date" />
+    <label>הערה (לא חובה)</label>
+    <textarea name="note" placeholder="פרטים נוספים..."></textarea>
+  `;
+  modal.classList.remove('hidden');
+}
+
+// טיפול בהוספת קטגוריה חדשה לתוך מודול מותאם
+document.addEventListener('change', (e) => {
+  if (e.target.matches('[data-custom-cat]') && e.target.value === '__add_new__') {
+    const cmId = e.target.dataset.customCat;
+    const cm = (state.customModules || []).find(x => x.id === cmId);
+    if (!cm) return;
+    const newCat = prompt('שם הקטגוריה החדשה:');
+    if (newCat && newCat.trim()) {
+      cm.categories = cm.categories || [];
+      const trimmed = newCat.trim();
+      if (!cm.categories.includes(trimmed)) cm.categories.push(trimmed);
+      saveState();
+      const newOption = document.createElement('option');
+      newOption.value = trimmed;
+      newOption.textContent = trimmed;
+      e.target.insertBefore(newOption, e.target.lastElementChild);
+      e.target.value = trimmed;
+    } else {
+      e.target.value = e.target.options[0]?.value || '';
+    }
+  }
+});
 
 function renderFitness() {
   const summary = document.getElementById('fitnessSummary');
@@ -1399,10 +1527,23 @@ modalForm.addEventListener('submit', (e) => {
   if (currentAdd === 'birthday')    state.birthdays.push({ id: uid(), ...data });
   if (currentAdd === 'note')        state.notes.push({ id: uid(), text: data.text, createdAt: Date.now() });
   if (currentAdd === 'fitness')     state.fitness.push({ id: uid(), ...data, createdAt: Date.now() });
+  if (currentAdd && currentAdd.startsWith('custom:')) {
+    const cmId = currentAdd.slice(7);
+    const cm = (state.customModules || []).find(x => x.id === cmId);
+    if (cm) {
+      cm.items.push({ id: uid(), ...data, createdAt: Date.now() });
+    }
+  }
   saveState();
+  const wasCustom = currentAdd && currentAdd.startsWith('custom:');
+  const cmId = wasCustom ? currentAdd.slice(7) : null;
   closeModal();
   showToast('נשמר ✓');
-  showScreen(document.querySelector('.screen.active').dataset.screen);
+  if (wasCustom) {
+    renderCustomModule(cmId);
+  } else {
+    showScreen(document.querySelector('.screen.active').dataset.screen);
+  }
 });
 
 // ===== הגדרות: עיר / התראות / גיבוי =====
@@ -1517,7 +1658,78 @@ document.addEventListener('click', (e) => {
     state.settings.modules[key] = !(state.settings.modules[key] !== false);
     saveState();
     renderModuleToggles();
+    applyHomeMenuButtons();
     showToast(state.settings.modules[key] ? 'הופעל' : 'כובה');
+    return;
+  }
+
+  // הוספת מודול מותאם
+  if (e.target.id === 'addCustomModule') {
+    const name = prompt('שם המודול (לדוגמה: ספרים שקראתי, טיולים, מתכונים):');
+    if (!name || !name.trim()) return;
+    const icon = prompt('אייקון (אימוג׳י אחד, לדוגמה: 📚 🌍 🍳):', '⭐') || '⭐';
+    const newMod = { id: 'cm_' + uid(), name: name.trim(), icon: icon.trim(), categories: [], items: [] };
+    state.customModules = state.customModules || [];
+    state.customModules.push(newMod);
+    saveState();
+    renderModuleToggles();
+    applyHomeMenuButtons();
+    showToast('מודול נוסף ✓');
+    return;
+  }
+
+  // עריכת שם/אייקון של מודול מותאם
+  const renameCustom = e.target.closest('[data-rename-custom]');
+  if (renameCustom) {
+    const id = renameCustom.dataset.renameCustom;
+    const cm = (state.customModules || []).find(x => x.id === id);
+    if (!cm) return;
+    const name = prompt('שם המודול:', cm.name);
+    if (name === null) return;
+    if (name.trim()) cm.name = name.trim();
+    const icon = prompt('אייקון:', cm.icon || '⭐');
+    if (icon !== null && icon.trim()) cm.icon = icon.trim();
+    saveState();
+    renderModuleToggles();
+    applyHomeMenuButtons();
+    showToast('עודכן');
+    return;
+  }
+
+  // מחיקת מודול מותאם
+  const delCustom = e.target.closest('[data-delete-custom]');
+  if (delCustom) {
+    const id = delCustom.dataset.deleteCustom;
+    const cm = (state.customModules || []).find(x => x.id === id);
+    if (!cm) return;
+    if (!confirm(`למחוק את המודול "${cm.name}" ואת כל הפריטים שבו?`)) return;
+    state.customModules = state.customModules.filter(x => x.id !== id);
+    saveState();
+    renderModuleToggles();
+    applyHomeMenuButtons();
+    showToast('נמחק');
+    return;
+  }
+
+  // הוספת פריט למודול מותאם
+  if (e.target.matches('[data-custom-add]')) {
+    openCustomAdd(e.target.dataset.customAdd);
+    return;
+  }
+
+  // מחיקת פריט ממודול מותאם
+  const customDel = e.target.closest('[data-custom-del]');
+  if (customDel) {
+    const cmId = customDel.dataset.customDel;
+    const itemId = customDel.dataset.itemId;
+    if (!confirm('למחוק?')) return;
+    const cm = (state.customModules || []).find(x => x.id === cmId);
+    if (cm) {
+      cm.items = cm.items.filter(it => it.id !== itemId);
+      saveState();
+      showToast('נמחק');
+      renderCustomModule(cmId);
+    }
     return;
   }
 
