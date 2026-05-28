@@ -555,6 +555,82 @@ textarea.full-select { resize: vertical; }
 .cal-dot.test { background: #c0392b; }
 .cal-dot.holiday { background: #f6c878; }
 
+/* ===== תצוגת שבוע (אג'נדה) ===== */
+.week-agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.week-day-section {
+  background: white;
+  border-radius: 18px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+}
+
+.week-day-section.today {
+  border-right: 5px solid #7b5cd6;
+  background: linear-gradient(to left, #faf7ff, white);
+}
+
+.week-day-section.shabbat {
+  border-right: 5px solid #f6c878;
+}
+
+.week-day-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.week-day-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #4a2e9c;
+}
+
+.week-day-date {
+  font-size: 15px;
+  color: #6b5e8f;
+}
+
+.week-day-heb {
+  font-size: 14px;
+  color: #8b7eb3;
+  margin-inline-start: auto;
+}
+
+.week-event {
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  background: #faf7ff;
+  border-radius: 10px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.week-event:last-child { margin-bottom: 0; }
+
+.week-event-time {
+  font-weight: 700;
+  color: #7b5cd6;
+  font-size: 14px;
+  min-width: 50px;
+}
+
+.week-empty {
+  color: #b3a8d1;
+  font-size: 14px;
+  text-align: center;
+  padding: 6px 0;
+}
+
 /* ===== טוגלים של מודולים ===== */
 .module-toggles {
   display: grid;

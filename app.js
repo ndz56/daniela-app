@@ -263,9 +263,70 @@ function getShabbatInfo() {
 function renderAppointments() {
   const view = state.settings.calendarView || 'month';
   document.getElementById('calMonthView').hidden = view !== 'month';
+  document.getElementById('calWeekView').hidden = view !== 'week';
   document.getElementById('calListView').hidden = view !== 'list';
+  // הסתרת ניווט חודש בתצוגות אחרות
+  document.getElementById('calPrev').style.visibility = view === 'month' ? '' : 'hidden';
+  document.getElementById('calNext').style.visibility = view === 'month' ? '' : 'hidden';
   if (view === 'month') renderCalendarMonth();
+  else if (view === 'week') renderWeekView();
   else renderAppointmentsList();
+}
+
+function renderWeekView() {
+  const container = document.getElementById('weekAgenda');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayIso = isoFromDate(today);
+  // הצגת 7 ימים מהיום
+  const sections = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today); d.setDate(today.getDate() + i);
+    const iso = isoFromDate(d);
+    const events = eventsOnDate(iso);
+    const isToday = iso === todayIso;
+    const isShabbat = d.getDay() === 6;
+    const heb = typeof hebcal !== 'undefined' ? (() => {
+      try { return new hebcal.HDate(d).renderGematriya(); } catch { return ''; }
+    })() : '';
+    const dayLabel = isToday ? 'היום' : i === 1 ? 'מחר' : `יום ${HE_DAYS[d.getDay()]}`;
+    const dateLabel = `${d.getDate()}/${d.getMonth()+1}`;
+
+    let eventsHtml = '';
+    if (events.length === 0) {
+      eventsHtml = '<div class="week-empty">— אין אירועים —</div>';
+    } else {
+      // מיון - אירועים עם שעה קודם
+      const sorted = [...events].sort((a,b) => {
+        const ta = a.item.time || 'zz';
+        const tb = b.item.time || 'zz';
+        return ta.localeCompare(tb);
+      });
+      eventsHtml = sorted.map(e => {
+        if (e.type === 'appointment') {
+          return `<div class="week-event">
+            <span class="week-event-time">${e.item.time || '—'}</span>
+            <span>📅 ${escapeHtml(e.item.title)}${e.item.who ? ' • ' + escapeHtml(e.item.who) : ''}</span>
+          </div>`;
+        }
+        if (e.type === 'test') return `<div class="week-event"><span class="week-event-time">—</span><span>🩸 בדיקה: ${escapeHtml(e.item.name)}</span></div>`;
+        if (e.type === 'birthday') return `<div class="week-event"><span class="week-event-time">🎂</span><span>יום הולדת ל${escapeHtml(e.item.name)}</span></div>`;
+        if (e.type === 'holiday') return `<div class="week-event"><span class="week-event-time">🕯️</span><span>${escapeHtml(e.item.name)}</span></div>`;
+        return '';
+      }).join('');
+    }
+
+    sections.push(`
+      <div class="week-day-section ${isToday ? 'today' : ''} ${isShabbat ? 'shabbat' : ''}">
+        <div class="week-day-header" data-day="${iso}">
+          <span class="week-day-name">${dayLabel}</span>
+          <span class="week-day-date">${dateLabel}</span>
+          <span class="week-day-heb">${escapeHtml(heb)}</span>
+        </div>
+        ${eventsHtml}
+      </div>
+    `);
+  }
+  container.innerHTML = sections.join('');
 }
 
 function renderAppointmentsList() {
@@ -962,9 +1023,13 @@ document.addEventListener('click', (e) => {
   if (e.target.id === 'calPrev') { calCursor.setMonth(calCursor.getMonth()-1); renderCalendarMonth(); return; }
   if (e.target.id === 'calNext') { calCursor.setMonth(calCursor.getMonth()+1); renderCalendarMonth(); return; }
   if (e.target.id === 'calToggle') {
-    state.settings.calendarView = state.settings.calendarView === 'list' ? 'month' : 'list';
+    const order = ['month', 'week', 'list'];
+    const cur = state.settings.calendarView || 'month';
+    const next = order[(order.indexOf(cur) + 1) % order.length];
+    state.settings.calendarView = next;
     saveState();
     renderAppointments();
+    showToast(next === 'month' ? '📅 חודש' : next === 'week' ? '🗓️ שבוע' : '📋 רשימה');
     return;
   }
 
