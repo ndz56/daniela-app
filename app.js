@@ -313,7 +313,7 @@ function renderWeekView() {
     const heb = typeof hebcal !== 'undefined' ? (() => {
       try { return new hebcal.HDate(d).renderGematriya(); } catch { return ''; }
     })() : '';
-    const dayLabel = isToday ? 'היום' : i === 1 ? 'מחר' : `יום ${HE_DAYS[d.getDay()]}`;
+    const dayLabel = isToday ? 'היום' : i === 1 ? 'מחר' : i === 2 ? 'מחרתיים' : `יום ${HE_DAYS[d.getDay()]}`;
     const dateLabel = `${d.getDate()}/${d.getMonth()+1}`;
 
     let eventsHtml = '';
@@ -519,7 +519,11 @@ function renderCalendarMonth() {
       isMatch = !!matchingAppt;
     }
     const heb = typeof hebcal !== 'undefined' ? (() => {
-      try { return new hebcal.HDate(c.date).getDate(); } catch { return ''; }
+      try {
+        const hd = new hebcal.HDate(c.date);
+        // גמטריה רק של היום בחודש (לא כולל החודש והשנה)
+        return hebcal.gematriya ? hebcal.gematriya(hd.getDate()) : hd.getDate();
+      } catch { return ''; }
     })() : '';
 
     const dots = events.slice(0,4).map(e => {
