@@ -340,8 +340,10 @@ function getThisWeekParasha() {
     });
     if (parsha) {
       let brief = parsha.renderBrief('he') || '';
-      // ניקוי - אם hebcal מחזיר עם "פרשת" קדמית או עם ניקוד, מסיר זאת
-      brief = brief.replace(/^\s*פָּ?רָ?שַ?ת\s+/, '').replace(/^\s*פרשת\s+/, '').trim();
+      // הסרת כל הניקוד (combining marks)
+      brief = brief.replace(/[֑-ֽֿׁ-ׂׄ-ׇׅ]/g, '').trim();
+      // הסרת "פרשת" קידומית אם קיימת (אחרי הסרת הניקוד)
+      brief = brief.replace(/^פרשת\s+/, '').replace(/^פרשה\s+/, '').replace(/^Parashat\s+/i, '');
       return 'פרשת ' + brief;
     }
   } catch {}
