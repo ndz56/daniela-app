@@ -339,8 +339,10 @@ function getThisWeekParasha() {
       return cats.includes('parashat') || cats.includes('parsha') || cats.includes('sedrah');
     });
     if (parsha) {
-      const brief = parsha.renderBrief('he');
-      return brief.startsWith('פרשת') ? brief : 'פרשת ' + brief;
+      let brief = parsha.renderBrief('he') || '';
+      // ניקוי - אם hebcal מחזיר עם "פרשת" קדמית או עם ניקוד, מסיר זאת
+      brief = brief.replace(/^\s*פָּ?רָ?שַ?ת\s+/, '').replace(/^\s*פרשת\s+/, '').trim();
+      return 'פרשת ' + brief;
     }
   } catch {}
   return '';
@@ -382,13 +384,12 @@ function getShabbatInfo() {
     const candleStr = fmtTime(sh.candles);
     const havStr = fmtTime(sh.havdalah);
     if (dayOfWeek === 6) {
-      // שבת - בלי פרשה (לפי בקשה)
-      return `🕯️ שבת שלום! יציאה ${havStr}`;
+      return `🕯️ שבת שלום! יציאת השבת ${havStr}`;
     }
     // יום שישי - מציג פרשה + זמני שבת
     const parsha = getThisWeekParasha();
     const p = parsha ? `📖 ${parsha} • ` : '';
-    return `${p}🕯️ כניסה ${candleStr} | יציאה ${havStr}`;
+    return `${p}🕯️ כניסת השבת ${candleStr} | יציאת השבת ${havStr}`;
   } catch { return ''; }
 }
 
