@@ -1104,6 +1104,7 @@ function renderShabbat() {
   });
   const box = document.getElementById('shabbatSuggestions');
   const aiBtn = document.getElementById('aiSuggestBtn');
+  const ingWrap = document.getElementById('aiIngredientsWrap');
   if (state.shabbat.lastSuggestion) {
     box.classList.add('visible');
     box.innerHTML = state.shabbat.lastSuggestion;
@@ -1111,10 +1112,10 @@ function renderShabbat() {
     box.classList.remove('visible');
     box.innerHTML = '';
   }
-  // הצגת כפתור AI רק אם יש מפתח ויש סוג שנבחר
-  if (aiBtn) {
-    aiBtn.hidden = !(state.settings.apiKey && state.shabbat.type);
-  }
+  // הצגת כפתור AI ושדה מצרכים רק אם יש מפתח וסוג נבחר
+  const showAI = !!(state.settings.apiKey && state.shabbat.type);
+  if (aiBtn) aiBtn.hidden = !showAI;
+  if (ingWrap) ingWrap.hidden = !showAI;
 }
 
 function renderSyncUI() {
@@ -1875,21 +1876,42 @@ async function generateAiSuggestion() {
   box.innerHTML = '<p style="text-align:center;color:#7b5cd6">רגע, ה-AI חושב על תפריט חדש לדניאלה...</p>';
 
   const type = state.shabbat.type;
+  const ingredients = (document.getElementById('aiIngredients')?.value || '').trim();
   const kosherRule = type === 'בשרי'
     ? 'אסור בשר וחלב ביחד - אסור גבינות, חמאה, חלב, שמנת, גלידה. דברים פרווה (ירקות, פירות, דגנים, ביצים, דגים בנפרד מהארוחה) - מותרים.'
     : type === 'חלבי'
     ? 'אסור בשר/עוף/הודו ושום מוצר בשרי. כל החלבי והפרווה מותר.'
     : 'בלי בשר ובלי חלב. רק ירקות, פירות, דגנים, קטניות, ביצים, דגים.';
 
-  const systemPrompt = `את עוזרת בישול שמציעה תפריטים לארוחת ערב שבת בכשרות יהודית.
+  const systemPrompt = `את עוזרת בישול שמציעה תפריטים לארוחת ערב שבת בכשרות יהודית, ומספקת הוראות הכנה ברורות וקצרות.
 - חובה: כל המצרכים כשרים (סימני כשרות).
-- חוקי כשרות: ${kosherRule}
-- ענה בעברית בלבד, בפורמט HTML פשוט.
-- כלול: שם התפריט, רשימת מנות (קדם-מנה, מנה ראשונה, מנה עיקרית, תוספות, קינוח).
-- הצעה אחת בלבד, מקורית ולא חוזרת על הקלאסי הצפוי.
-- אורך מתאים: 6-9 מנות, לא יותר.`;
+- חוקי כשרות עבור ${type}: ${kosherRule}
+- ענה בעברית בלבד.
+- כלול: שם התפריט + 6-9 מנות (קדם-מנה, מנה ראשונה, עיקרית, תוספות, קינוח).
+- לכל מנה - תכלול **הוראות הכנה קצרות וברורות** (3-6 שלבים פשוטים).
+- אם המשתמשת ציינה מצרכים שיש לה - השתמשי בהם כמה שיותר.
+- פורמט: HTML פשוט.
 
-  const userPrompt = `הציעי תפריט יצירתי לארוחת ערב שבת ${type}. בבקשה ב-HTML עם <h3> לכותרת, <ul><li> למנות, ו-<p> להערות. שני שורה אחת קצרה בסוף עם רעיון לרוטב/תיבול מיוחד.`;
+מבנה התשובה:
+<h3>שם התפריט</h3>
+<p>תיאור קצר של רעיון הארוחה (1-2 משפטים)</p>
+<div class="dish">
+  <h4>🍽️ שם המנה</h4>
+  <p><b>מצרכים:</b> רשימה מצומצמת מופרדת בפסיקים</p>
+  <ol>
+    <li>שלב 1 - הסבר קצר</li>
+    <li>שלב 2</li>
+    <li>שלב 3</li>
+  </ol>
+</div>
+(לחזור על מבנה .dish עבור כל מנה)
+<p style="margin-top:14px"><b>💡 טיפ:</b> רעיון אחד לרוטב/תיבול/תוספת מיוחדת</p>`;
+
+  const ingredientsLine = ingredients
+    ? `\n\nיש לי במקרר/מזווה: ${ingredients}\nאם מתאים - השתמשי במצרכים האלה כמה שאפשר, אבל ניתן להוסיף מצרכים בסיסיים נוספים שצריך.`
+    : '';
+
+  const userPrompt = `הציעי תפריט יצירתי לארוחת ערב שבת ${type}, כולל הוראות הכנה קצרות לכל מנה.${ingredientsLine}`;
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1902,7 +1924,7 @@ async function generateAiSuggestion() {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 800,
+        max_tokens: 3000,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }]
       })

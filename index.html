@@ -143,6 +143,11 @@
           <button class="choice-btn" data-shabbat-type="חלבי">🥛 חלבי</button>
           <button class="choice-btn" data-shabbat-type="פרווה">🥗 פרווה</button>
         </div>
+        <div id="aiIngredientsWrap" hidden style="margin-bottom:14px">
+          <label style="display:block;font-weight:700;color:#4a2e9c;margin-bottom:6px;text-align:right">🥕 מצרכים שיש לך (לא חובה):</label>
+          <textarea id="aiIngredients" placeholder="לדוגמה: עוף, גזר, ביצים, פסטה, גבינת קוטג', לימון..." class="full-select" style="min-height:70px;font-size:15px"></textarea>
+          <div class="hint" style="text-align:right;font-size:13px;margin-top:4px">אם תמלאי - ה-AI יבנה תפריט שמשתמש במצרכים שיש</div>
+        </div>
         <button id="aiSuggestBtn" class="full-btn" style="margin-bottom:14px" hidden>✨ הצעה חדשה מ-AI</button>
         <div id="shabbatSuggestions" class="shabbat-suggestions"></div>
       </div>
