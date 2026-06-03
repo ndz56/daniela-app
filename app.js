@@ -1,6 +1,7 @@
 /* ============================================================
    היומן של דניאלה — לוגיקה ראשית
    ============================================================ */
+const APP_VERSION = '2.1 (08-2026)';
 
 // ===== מצב גלובלי =====
 const STORAGE_KEY = 'daniela-app-v1';
@@ -1134,6 +1135,8 @@ function renderSyncUI() {
 }
 
 function renderSettings() {
+  const ver = document.getElementById('appVersion');
+  if (ver) ver.textContent = APP_VERSION;
   document.getElementById('citySelect').value = state.settings.city || '';
   const status = document.getElementById('notifyStatus');
   if (!('Notification' in window)) {
@@ -1696,6 +1699,24 @@ document.addEventListener('click', (e) => {
   if (e.target.id === 'aiSuggestBtn') generateAiSuggestion();
   if (e.target.id === 'connectSyncBtn') connectSync();
   if (e.target.id === 'disconnectSyncBtn') disconnectSync();
+
+  if (e.target.id === 'hardReloadBtn') {
+    if (!confirm('זה ינקה את הקאש ויטען את האפליקציה מחדש. הנתונים שלך לא ימחקו. להמשיך?')) return;
+    (async () => {
+      try {
+        if (navigator.serviceWorker) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+        }
+        if (window.caches) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+      } catch {}
+      // ריענון עם פרמטר ייחודי לעקיפת קאש HTTP
+      location.replace(location.pathname + '?v=' + Date.now());
+    })();
+  }
 
   // ניווט בלוח
   if (e.target.id === 'calPrev') { calCursor.setMonth(calCursor.getMonth()-1); renderCalendarMonth(); return; }
