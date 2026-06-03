@@ -1,7 +1,7 @@
 /* ============================================================
    היומן של דניאלה — לוגיקה ראשית
    ============================================================ */
-const APP_VERSION = '2.2 (08-2026)';
+const APP_VERSION = '2.3 (08-2026)';
 
 // ===== מצב גלובלי =====
 const STORAGE_KEY = 'daniela-app-v1';
@@ -866,6 +866,11 @@ function renderBirthdays() {
         <div class="bday-section">
           <div class="bday-label">🕎 תאריך לידה עברי</div>
           <div class="bday-value">${escapeHtml(origHeb)}</div>
+        </div>
+        <div class="bday-section bday-section-next">
+          <div class="bday-label">🎉 יום הולדת הבא</div>
+          <div class="bday-value">${formatDateHe(nextGreg)}</div>
+          <div class="bday-value-sub">${escapeHtml(nextHeb)}</div>
         </div>
         <div class="bday-track">${trackByLabel}</div>
       </div>
