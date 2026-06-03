@@ -859,11 +859,20 @@ function renderBirthdays() {
     <div class="item-card">
       <div class="item-main">
         <div class="item-title">🎂 ${escapeHtml(b.name)} <span style="font-size:14px;color:#6b5e8f;font-weight:600">(גיל ${age})</span></div>
-        <div class="item-sub"><b>תאריך לידה (לועזי):</b> ${escapeHtml(origGreg)}</div>
-        <div class="item-sub"><b>תאריך לידה (עברי):</b> ${escapeHtml(origHeb)}</div>
-        <div class="item-sub" style="margin-top:6px;color:#7b5cd6"><b>יום הולדת הבא:</b> ${formatDateHe(nextGreg)}</div>
-        <div class="item-sub" style="color:#7b5cd6">${escapeHtml(nextHeb)}</div>
-        <div class="item-sub" style="font-size:13px;color:#8b7eb3;margin-top:4px">${trackByLabel}</div>
+        <div class="bday-row">
+          <div class="bday-label">תאריך לידה (לועזי):</div>
+          <div class="bday-value">${escapeHtml(origGreg)}</div>
+        </div>
+        <div class="bday-row">
+          <div class="bday-label">תאריך לידה (עברי):</div>
+          <div class="bday-value">${escapeHtml(origHeb)}</div>
+        </div>
+        <div class="bday-row bday-row-next">
+          <div class="bday-label">יום הולדת הבא:</div>
+          <div class="bday-value">${formatDateHe(nextGreg)}</div>
+          <div class="bday-value-sub">${escapeHtml(nextHeb)}</div>
+        </div>
+        <div class="bday-track">${trackByLabel}</div>
       </div>
       <button class="item-action edit" data-edit="birthday" data-id="${b.id}" aria-label="עריכה">✏️</button>
       <button class="item-action delete" data-del="birthday" data-id="${b.id}" aria-label="מחיקה">🗑️</button>
