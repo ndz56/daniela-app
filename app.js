@@ -1,7 +1,7 @@
 /* ============================================================
    היומן של דניאלה — לוגיקה ראשית
    ============================================================ */
-const APP_VERSION = '2.1 (08-2026)';
+const APP_VERSION = '2.2 (08-2026)';
 
 // ===== מצב גלובלי =====
 const STORAGE_KEY = 'daniela-app-v1';
@@ -859,18 +859,13 @@ function renderBirthdays() {
     <div class="item-card">
       <div class="item-main">
         <div class="item-title">🎂 ${escapeHtml(b.name)} <span style="font-size:14px;color:#6b5e8f;font-weight:600">(גיל ${age})</span></div>
-        <div class="bday-row">
-          <div class="bday-label">תאריך לידה (לועזי):</div>
+        <div class="bday-section">
+          <div class="bday-label">📅 תאריך לידה לועזי</div>
           <div class="bday-value">${escapeHtml(origGreg)}</div>
         </div>
-        <div class="bday-row">
-          <div class="bday-label">תאריך לידה (עברי):</div>
+        <div class="bday-section">
+          <div class="bday-label">🕎 תאריך לידה עברי</div>
           <div class="bday-value">${escapeHtml(origHeb)}</div>
-        </div>
-        <div class="bday-row bday-row-next">
-          <div class="bday-label">יום הולדת הבא:</div>
-          <div class="bday-value">${formatDateHe(nextGreg)}</div>
-          <div class="bday-value-sub">${escapeHtml(nextHeb)}</div>
         </div>
         <div class="bday-track">${trackByLabel}</div>
       </div>
@@ -2064,6 +2059,27 @@ function checkReminders() {
       const key = `appt:${a.id}:${today}`;
       if (!notified.has(key)) {
         fireNotification('פגישה מתקרבת 📅', `${a.title} בעוד ${Math.round(diffMin)} דקות`);
+        notified.add(key);
+      }
+    }
+  });
+
+  // ימי הולדת - בבוקר היום של ההולדת (פעם אחת ביום)
+  state.birthdays.forEach(b => {
+    const isToday = b.calendar === 'hebrew'
+      ? hebrewBirthdayThisYear(b.date) === today
+      : (() => {
+          const [, m, d] = b.date.split('-');
+          const [, tm, td] = today.split('-');
+          return m === tm && d === td;
+        })();
+    if (isToday) {
+      const key = `bday:${b.id}:${today}`;
+      if (!notified.has(key)) {
+        const [by, bm, bd] = b.date.split('-').map(Number);
+        const tYear = new Date().getFullYear();
+        const age = tYear - by;
+        fireNotification('יום הולדת היום! 🎂', `היום יום הולדת ${age} ל${b.name}!`);
         notified.add(key);
       }
     }
