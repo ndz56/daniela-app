@@ -75,9 +75,14 @@ const CATEGORIES = {
 function getCategoryColor(cat) { return CATEGORIES[cat || 'general']?.color || CATEGORIES.general.color; }
 
 function todayISO() {
-  const d = new Date();
-  d.setHours(0,0,0,0);
-  return d.toISOString().slice(0,10);
+  return isoFromLocalDate(new Date());
+}
+
+function isoFromLocalDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
 }
 
 function formatDateHe(iso) {
@@ -119,7 +124,7 @@ function hebrewBirthdayThisYear(originalIso) {
     const origHd = new hebcal.HDate(new Date(y, m-1, d));
     const thisYearHebYear = new hebcal.HDate(new Date()).getFullYear();
     const thisYearHd = new hebcal.HDate(origHd.getDate(), origHd.getMonth(), thisYearHebYear);
-    return thisYearHd.greg().toISOString().slice(0,10);
+    return isoFromLocalDate(thisYearHd.greg());
   } catch { return null; }
 }
 
@@ -516,10 +521,11 @@ function renderAppointmentsList() {
 
 function expandUpcomingAppointments(fromISO, daysAhead = 90) {
   const out = [];
-  const start = new Date(fromISO); start.setHours(0,0,0,0);
+  const [sy, sm, sd] = fromISO.split('-').map(Number);
+  const start = new Date(sy, sm-1, sd);
   for (let i = 0; i <= daysAhead; i++) {
     const d = new Date(start); d.setDate(start.getDate() + i);
-    const iso = d.toISOString().slice(0,10);
+    const iso = isoFromLocalDate(d);
     state.appointments.forEach(a => {
       if (repeatMatches(a, iso)) {
         out.push({ ...a, date: iso, originalId: a.id });
@@ -530,10 +536,8 @@ function expandUpcomingAppointments(fromISO, daysAhead = 90) {
   return out;
 }
 
-function isoFromDate(d) {
-  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-}
+// השם הישן נשמר לתאימות
+const isoFromDate = isoFromLocalDate;
 
 function eventsOnDate(iso) {
   const events = [];
@@ -820,7 +824,7 @@ function renderBirthdays() {
           const origHd = new hebcal.HDate(new Date(y, m-1, d));
           const nextHebYear = new hebcal.HDate(today).getFullYear() + 1;
           const nextHd = new hebcal.HDate(origHd.getDate(), origHd.getMonth(), nextHebYear);
-          nextGreg = nextHd.greg().toISOString().slice(0,10);
+          nextGreg = isoFromLocalDate(nextHd.greg());
         } catch { nextGreg = b.date; }
       }
     } else {
@@ -828,7 +832,7 @@ function renderBirthdays() {
       const thisYear = today.getFullYear();
       let candidate = new Date(thisYear, Number(m)-1, Number(d));
       if (candidate < today) candidate = new Date(thisYear+1, Number(m)-1, Number(d));
-      nextGreg = candidate.toISOString().slice(0,10);
+      nextGreg = isoFromLocalDate(candidate);
     }
     return { ...b, nextGreg };
   }).sort((a,b) => a.nextGreg.localeCompare(b.nextGreg));
