@@ -1,7 +1,7 @@
 /* ============================================================
    היומן של דניאלה — לוגיקה ראשית
    ============================================================ */
-const APP_VERSION = '2.3 (08-2026)';
+const APP_VERSION = '2.4 (08-2026)';
 const NOTIFICATION_ICON = 'icons/icon-192.png';
 
 // ===== מצב גלובלי =====
@@ -1147,6 +1147,12 @@ function renderSyncUI() {
 function renderSettings() {
   const ver = document.getElementById('appVersion');
   if (ver) ver.textContent = APP_VERSION;
+  // הסתרת כפתור התקנה אם האפליקציה כבר רצה במצב מותקן
+  const installBtn = document.getElementById('installAppBtn');
+  if (installBtn) {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    installBtn.style.display = isStandalone ? 'none' : 'block';
+  }
   document.getElementById('citySelect').value = state.settings.city || '';
   const status = document.getElementById('notifyStatus');
   if (!('Notification' in window)) {
@@ -2116,6 +2122,54 @@ function showToast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.add('hidden'), 1800);
 }
+
+// ===== PWA install prompt =====
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  showInstallBanner();
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  hideInstallBanner();
+  showToast('🎉 האפליקציה הותקנה!');
+});
+
+function showInstallBanner() {
+  if (document.getElementById('installBanner')) return;
+  // לא להציג אם כבר רץ במצב standalone (אומר שכבר מותקן)
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  const banner = document.createElement('div');
+  banner.id = 'installBanner';
+  banner.style.cssText = 'position:fixed;bottom:20px;inset-inline:18px;background:linear-gradient(135deg,#27ae60,#2ecc71);color:white;padding:14px 18px;border-radius:14px;z-index:300;box-shadow:0 10px 30px rgba(39,174,96,0.4);display:flex;align-items:center;gap:12px;font-weight:700';
+  banner.innerHTML = '<span style="font-size:20px">📲</span><span style="flex:1">להתקין כאפליקציה?</span><button id="installAcceptBtn" style="background:white;color:#27ae60;border:none;padding:8px 16px;border-radius:10px;font-weight:700;font-family:inherit;cursor:pointer">התקן</button><button id="installDismissBtn" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:8px 12px;border-radius:10px;font-weight:700;font-family:inherit;cursor:pointer">לא עכשיו</button>';
+  document.body.appendChild(banner);
+}
+
+function hideInstallBanner() {
+  document.getElementById('installBanner')?.remove();
+}
+
+async function triggerInstall() {
+  if (!deferredInstallPrompt) {
+    alert('להתקנה: בכרום → 3 נקודות בפינה → "התקן את האפליקציה" / "Install app".\n\nאם רואה רק "הוסף למסך הבית" - האפליקציה כבר מותקנת כקיצור דרך. הסירי את האייקון הקיים ונסי שוב.');
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  hideInstallBanner();
+  if (outcome === 'accepted') showToast('מתקין... ⏳');
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'installAcceptBtn') triggerInstall();
+  if (e.target.id === 'installDismissBtn') hideInstallBanner();
+  if (e.target.id === 'installAppBtn') triggerInstall();
+});
 
 // ===== service worker =====
 if ('serviceWorker' in navigator) {
