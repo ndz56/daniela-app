@@ -1,7 +1,7 @@
 /* ============================================================
    היומן של דניאלה — לוגיקה ראשית
    ============================================================ */
-const APP_VERSION = '2.4 (08-2026)';
+const APP_VERSION = '2.5 (08-2026)';
 const NOTIFICATION_ICON = 'icons/icon-192.png';
 
 // ===== מצב גלובלי =====
@@ -222,6 +222,7 @@ function renderHome() {
   document.getElementById('todayHebrew').textContent = getHebrewDateString(now);
   applyHomeMenuButtons();
   applyModuleVisibility();
+  updateHomeInstallBanner();
 
   // מידע על שבת/חג
   const shabbatInfo = getShabbatInfo();
@@ -2154,21 +2155,49 @@ function hideInstallBanner() {
 }
 
 async function triggerInstall() {
-  if (!deferredInstallPrompt) {
-    alert('להתקנה: בכרום → 3 נקודות בפינה → "התקן את האפליקציה" / "Install app".\n\nאם רואה רק "הוסף למסך הבית" - האפליקציה כבר מותקנת כקיצור דרך. הסירי את האייקון הקיים ונסי שוב.');
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    hideInstallBanner();
+    if (outcome === 'accepted') showToast('מתקין... ⏳');
     return;
   }
-  deferredInstallPrompt.prompt();
-  const { outcome } = await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt = null;
-  hideInstallBanner();
-  if (outcome === 'accepted') showToast('מתקין... ⏳');
+  // אם אין prompt זמין - מנחה את המשתמש
+  alert(
+    'להתקנה אמיתית של האפליקציה:\n\n' +
+    '1. סגרי את האפליקציה הזו\n' +
+    '2. אם יש אייקון "היומן שלי" על המסך - לחיצה ארוכה → הסירי\n' +
+    '3. פתחי כרום (לא מהאפליקציה!) ולכי לכתובת:\n' +
+    'ndz56.github.io/daniela-app\n' +
+    '4. בכרום → 3 נקודות בפינה → "התקן את האפליקציה"\n\n' +
+    'אם רואה רק "הוסף למסך הבית" - זה אומר שהאפליקציה כבר רשומה. הסירי קודם את הקיים.'
+  );
 }
 
 document.addEventListener('click', (e) => {
   if (e.target.id === 'installAcceptBtn') triggerInstall();
   if (e.target.id === 'installDismissBtn') hideInstallBanner();
   if (e.target.id === 'installAppBtn') triggerInstall();
+  if (e.target.id === 'homeInstallBtn') triggerInstall();
+  if (e.target.id === 'homeInstallDismiss') {
+    localStorage.setItem('install-dismissed', '1');
+    updateHomeInstallBanner();
+  }
+});
+
+function updateHomeInstallBanner() {
+  const banner = document.getElementById('homeInstallBanner');
+  if (!banner) return;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  const dismissed = localStorage.getItem('install-dismissed') === '1';
+  banner.hidden = isStandalone || dismissed;
+}
+
+window.addEventListener('beforeinstallprompt', () => updateHomeInstallBanner());
+window.addEventListener('appinstalled', () => {
+  localStorage.removeItem('install-dismissed');
+  updateHomeInstallBanner();
 });
 
 // ===== service worker =====

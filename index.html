@@ -31,6 +31,14 @@
   <main id="app">
     <!-- מסך הבית -->
     <section class="screen active" data-screen="home">
+      <div id="homeInstallBanner" class="home-install-banner" hidden>
+        <div class="install-banner-text">
+          <div class="install-banner-title">📲 להתקין את האפליקציה</div>
+          <div class="install-banner-sub">כדי שתופיע ברשימת האפליקציות עם תזכורות מלאות</div>
+        </div>
+        <button id="homeInstallBtn" class="install-banner-btn">התקן</button>
+        <button id="homeInstallDismiss" class="install-banner-x" aria-label="סגירה">✕</button>
+      </div>
       <div class="today-card">
         <div class="today-date" id="todayDate">—</div>
         <div class="today-hebrew" id="todayHebrew">—</div>
