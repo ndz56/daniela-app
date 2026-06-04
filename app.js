@@ -2,6 +2,7 @@
    היומן של דניאלה — לוגיקה ראשית
    ============================================================ */
 const APP_VERSION = '2.3 (08-2026)';
+const NOTIFICATION_ICON = 'icons/icon-192.png';
 
 // ===== מצב גלובלי =====
 const STORAGE_KEY = 'daniela-app-v1';
@@ -1992,12 +1993,16 @@ async function requestNotifications() {
     alert('הדפדפן הזה לא תומך בהתראות');
     return;
   }
-  const perm = await Notification.requestPermission();
+  const perm = Notification.permission === 'denied'
+    ? 'denied'
+    : await Notification.requestPermission();
   if (perm === 'granted') {
     state.settings.notifications = true;
     saveState();
     showToast('יופי! התראות הופעלו 🔔');
-    new Notification('היומן של דניאלה', { body: 'התראות עובדות! כאן תקבלי תזכורות.', icon: 'icons/icon.svg' });
+    fireNotification('היומן של דניאלה', 'התראות עובדות! כאן תקבלי תזכורות.');
+  } else if (perm === 'denied') {
+    alert('התראות חסומות לאתר. כדי לאפשר: לחצי על אייקון המנעול 🔒 ליד הכתובת בדפדפן → הגדרות אתר → התראות → אפשר. ואז רעני את הדף.');
   } else {
     showToast('לא ניתנה הרשאה');
   }
@@ -2032,7 +2037,7 @@ function saveNotifiedSet(set) {
 
 function fireNotification(title, body) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  try { new Notification(title, { body, icon: 'icons/icon.svg', tag: title + body }); } catch {}
+  try { new Notification(title, { body, icon: NOTIFICATION_ICON, tag: title + body }); } catch {}
 }
 
 function checkReminders() {
