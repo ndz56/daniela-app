@@ -1,7 +1,7 @@
 /* ============================================================
    היומן של דניאלה — לוגיקה ראשית
    ============================================================ */
-const APP_VERSION = '2.6 (08-2026)';
+const APP_VERSION = '2.7 (08-2026)';
 const NOTIFICATION_ICON = 'icons/icon-192.png';
 
 // ===== מצב גלובלי =====
@@ -2176,13 +2176,17 @@ async function triggerInstall() {
 }
 
 document.addEventListener('click', (e) => {
-  if (e.target.id === 'installAcceptBtn') triggerInstall();
-  if (e.target.id === 'installDismissBtn') hideInstallBanner();
-  if (e.target.id === 'installAppBtn') triggerInstall();
-  if (e.target.id === 'homeInstallBtn') triggerInstall();
-  if (e.target.id === 'homeInstallDismiss') {
+  if (e.target.closest('#installAcceptBtn')) { triggerInstall(); return; }
+  if (e.target.closest('#installDismissBtn')) { hideInstallBanner(); return; }
+  if (e.target.closest('#installAppBtn')) { triggerInstall(); return; }
+  if (e.target.closest('#homeInstallBtn')) { triggerInstall(); return; }
+  if (e.target.closest('#homeInstallDismiss')) {
     localStorage.setItem('install-dismissed', '1');
-    updateHomeInstallBanner();
+    localStorage.setItem('app-installed', '1');
+    const banner = document.getElementById('homeInstallBanner');
+    if (banner) banner.hidden = true;
+    showToast('הבאנר הוסר ✓');
+    return;
   }
 });
 
