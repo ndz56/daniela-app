@@ -1,7 +1,7 @@
 /* ============================================================
    היומן של דניאלה — לוגיקה ראשית
    ============================================================ */
-const APP_VERSION = '2.5 (08-2026)';
+const APP_VERSION = '2.6 (08-2026)';
 const NOTIFICATION_ICON = 'icons/icon-192.png';
 
 // ===== מצב גלובלי =====
@@ -2190,13 +2190,16 @@ function updateHomeInstallBanner() {
   const banner = document.getElementById('homeInstallBanner');
   if (!banner) return;
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  // ברגע שזיהינו מצב standalone - שומרים דגל קבוע (חוצה גם פתיחות עתידיות בכרום)
+  if (isStandalone) localStorage.setItem('app-installed', '1');
+  const everInstalled = localStorage.getItem('app-installed') === '1';
   const dismissed = localStorage.getItem('install-dismissed') === '1';
-  banner.hidden = isStandalone || dismissed;
+  banner.hidden = isStandalone || everInstalled || dismissed;
 }
 
 window.addEventListener('beforeinstallprompt', () => updateHomeInstallBanner());
 window.addEventListener('appinstalled', () => {
-  localStorage.removeItem('install-dismissed');
+  localStorage.setItem('app-installed', '1');
   updateHomeInstallBanner();
 });
 
