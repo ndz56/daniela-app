@@ -1,6 +1,6 @@
 // Service Worker - אסטרטגיה: network-first ל-HTML/JS/CSS (תמיד חדש אם יש אינטרנט)
 // cache-first לאייקונים וספריות חיצוניות
-const CACHE = 'daniela-v30';
+const CACHE = 'daniela-v31';
 
 const NETWORK_FIRST = ['index.html', 'app.js', 'styles.css', 'manifest.json', 'sw.js', '/'];
 
@@ -19,6 +19,22 @@ self.addEventListener('activate', e => {
     // הודעה ללקוחות שיש גרסה חדשה
     const clients = await self.clients.matchAll();
     clients.forEach(c => c.postMessage({ type: 'SW_UPDATED', version: CACHE }));
+  })());
+});
+
+// לחיצה על התראה - מביא את האפליקציה לקדמה
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil((async () => {
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    // אם יש כבר חלון פתוח - הבא אותו לקדמה
+    for (const c of clients) {
+      if ('focus' in c) return c.focus();
+    }
+    // אחרת פתח חלון חדש
+    if (self.clients.openWindow) {
+      return self.clients.openWindow('./');
+    }
   })());
 });
 

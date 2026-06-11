@@ -1,7 +1,7 @@
 /* ============================================================
    היומן של דניאלה — לוגיקה ראשית
    ============================================================ */
-const APP_VERSION = '2.7 (08-2026)';
+const APP_VERSION = '2.8 (08-2026)';
 const NOTIFICATION_ICON = 'icons/icon-192.png';
 
 // ===== מצב גלובלי =====
@@ -1709,6 +1709,7 @@ document.addEventListener('change', (e) => {
 
 document.addEventListener('click', (e) => {
   if (e.target.id === 'enableNotifyBtn') requestNotifications();
+  if (e.target.id === 'testNotifyBtn') sendTestNotification();
   if (e.target.id === 'exportBtn') exportBackup();
   if (e.target.id === 'importBtn') document.getElementById('importFile').click();
   if (e.target.id === 'recordNoteBtn') startRecording();
@@ -1995,6 +1996,19 @@ async function generateAiSuggestion() {
   }
 }
 
+async function sendTestNotification() {
+  if (!('Notification' in window)) {
+    alert('הדפדפן לא תומך בהתראות');
+    return;
+  }
+  if (Notification.permission !== 'granted') {
+    alert('קודם צריך להפעיל התראות (כפתור מעל). אחר כך תוכלי לבדוק.');
+    return;
+  }
+  await fireNotification('🎉 בדיקת התראה', 'אם רואה את ההודעה הזו - ההתראות עובדות מצוין!');
+  showToast('נשלחה התראת בדיקה');
+}
+
 async function requestNotifications() {
   if (!('Notification' in window)) {
     alert('הדפדפן הזה לא תומך בהתראות');
@@ -2042,9 +2056,25 @@ function saveNotifiedSet(set) {
   localStorage.setItem(NOTIFIED_KEY, JSON.stringify(arr));
 }
 
-function fireNotification(title, body) {
+async function fireNotification(title, body) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  try { new Notification(title, { body, icon: NOTIFICATION_ICON, tag: title + body }); } catch {}
+  const opts = {
+    body, icon: NOTIFICATION_ICON, badge: NOTIFICATION_ICON,
+    tag: title + body, vibrate: [200, 100, 200],
+    lang: 'he', dir: 'rtl', requireInteraction: false
+  };
+  // עדיפות לראש - דרך Service Worker (עובד טוב יותר ב-PWA מותקנת + מופיע ברשימת התראות של אנדרואיד)
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg?.showNotification) {
+        await reg.showNotification(title, opts);
+        return;
+      }
+    }
+  } catch {}
+  // fallback - ה-API הרגיל
+  try { new Notification(title, opts); } catch {}
 }
 
 function checkReminders() {
