@@ -1,6 +1,6 @@
 // Service Worker - אסטרטגיה: network-first ל-HTML/JS/CSS (תמיד חדש אם יש אינטרנט)
 // cache-first לאייקונים וספריות חיצוניות
-const CACHE = 'daniela-v31';
+const CACHE = 'daniela-v32';
 
 const NETWORK_FIRST = ['index.html', 'app.js', 'styles.css', 'manifest.json', 'sw.js', '/'];
 

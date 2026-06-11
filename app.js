@@ -1,7 +1,7 @@
 /* ============================================================
    היומן של דניאלה — לוגיקה ראשית
    ============================================================ */
-const APP_VERSION = '2.8 (08-2026)';
+const APP_VERSION = '2.9 (08-2026)';
 const NOTIFICATION_ICON = 'icons/icon-192.png';
 
 // ===== מצב גלובלי =====
@@ -1451,6 +1451,14 @@ const ADD_CONFIGS = {
       { name: 'location', label: 'מיקום (לא חובה)', type: 'text', placeholder: 'כתובת / קליניקה / מקום' },
       { name: 'date',  label: 'מתי?',       type: 'date', required: true },
       { name: 'time',  label: 'באיזו שעה?', type: 'time' },
+      { name: 'reminderMinutes', label: 'תזכר אותי', type: 'select', options: [
+        { value: '30',   label: '30 דקות לפני (ברירת מחדל)' },
+        { value: '10',   label: '10 דקות לפני' },
+        { value: '60',   label: 'שעה לפני' },
+        { value: '120',  label: 'שעתיים לפני' },
+        { value: '1440', label: 'יום לפני' },
+        { value: '0',    label: 'בלי תזכורת' }
+      ]},
       { name: 'repeat', label: 'חוזרת?', type: 'select', options: [
         { value: 'none',    label: 'חד פעמית' },
         { value: 'weekly',  label: 'כל שבוע' },
@@ -2096,16 +2104,22 @@ function checkReminders() {
     }
   });
 
-  // פגישות - 30 דק׳ לפני
+  // פגישות - לפי הגדרת התזכורת של כל פגישה (ברירת מחדל 30)
   state.appointments.forEach(a => {
     if (!repeatMatches(a, today) || !a.time) return;
+    const reminderMin = a.reminderMinutes != null ? Number(a.reminderMinutes) : 30;
+    if (!reminderMin) return; // 0 = בלי תזכורת
     const [hh, mm] = a.time.split(':').map(Number);
     const apptTime = new Date(now); apptTime.setHours(hh, mm, 0, 0);
     const diffMin = (apptTime - now) / 60000;
-    if (diffMin <= 30 && diffMin > 0) {
+    // חלון של דקה אחת סביב נקודת התזכורת
+    if (diffMin <= reminderMin && diffMin > reminderMin - 1) {
       const key = `appt:${a.id}:${today}`;
       if (!notified.has(key)) {
-        fireNotification('פגישה מתקרבת 📅', `${a.title} בעוד ${Math.round(diffMin)} דקות`);
+        const whenStr = reminderMin >= 60
+          ? (reminderMin >= 1440 ? 'מחר' : `בעוד ${Math.round(reminderMin/60)} שעות`)
+          : `בעוד ${Math.round(diffMin)} דקות`;
+        fireNotification('פגישה מתקרבת 📅', `${a.title} ${whenStr}${a.time ? ' (' + a.time + ')' : ''}`);
         notified.add(key);
       }
     }
